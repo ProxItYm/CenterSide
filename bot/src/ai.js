@@ -97,7 +97,9 @@ async function complete({ system, messages, maxTokens = 220 }) {
       body: JSON.stringify({
         model: provider.model,
         temperature: 0.5,
-        max_tokens: maxTokens,
+        // gpt-oss models spend the whole budget on hidden reasoning without this.
+        ...(provider.model.includes('gpt-oss') ? { reasoning_effort: 'low' } : {}),
+        max_tokens: Math.max(maxTokens, 400),
         messages: [{ role: 'system', content: system }, ...messages],
       }),
     });

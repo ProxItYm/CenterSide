@@ -27,6 +27,7 @@ const {
   updatePack,
   addAnswer,
   removeAnswer,
+  shouldEscalate,
 } = require('./knowledge');
 const {
   nextReply,
@@ -594,10 +595,21 @@ async function handleTicketMessage(message, pack) {
   pushHistory(message.channelId, 'user', text);
   autoReplyAt.set(message.channelId, Date.now());
 
+  // Hard triggers and an explicit request for a person never reach the model.
+  const trigger = shouldEscalate(pack, text);
+  const wantsHuman = /\b(human|real person|staff member|moderator|admin|support agent)\b/i.test(text);
   const provider = await ai.describeProvider();
   let result = null;
 
-  if (provider) {
+  if (trigger || wantsHuman) {
+    result = {
+      mode: 'escalate',
+      text: trigger
+        ? `**That one goes straight to a human.** Anything about ${trigger} is above a bot's pay grade. Staff are being pinged now and the whole thread comes with it.`
+        : "Understood — pinging a human now. I've kept everything you told me in the thread so you only have to say it once.",
+      escalateReason: trigger || 'member asked for a human',
+    };
+  } else if (provider) {
     await message.channel.sendTyping().catch(() => {});
     const answer = await ai.complete({
       system: systemPrompt(pack, ticket, settings),
