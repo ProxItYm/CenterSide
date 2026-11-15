@@ -31,6 +31,10 @@ module.exports = {
     autoAnswer: true,
     slaMinutes: 15,
     autoCloseHours: 24,
+    welcomeEnabled: false,
+    welcomeChannelId: null,
+    welcomeMessage: '',
+    welcomeTitle: '',
   },
 
   panelCategories: [

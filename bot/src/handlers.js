@@ -14,7 +14,7 @@ const {
 } = require('discord.js');
 
 const { panelCategories, color } = require('./config');
-const { panelMessage, baseEmbed } = require('./ui');
+const { panelMessage, baseEmbed, welcomeEmbed } = require('./ui');
 const {
   openTicket,
   claimTicket,
@@ -287,6 +287,73 @@ async function handleAnswers(interaction) {
   return;
 }
 
+
+/* ------------------------------------------------------------------ */
+/* /welcome                                                            */
+/* ------------------------------------------------------------------ */
+
+async function handleWelcome(interaction) {
+  const record = await guildRecord(interaction.guildId);
+  const settings = record.settings;
+
+  if (interaction.options.getBoolean('off')) {
+    settings.welcomeEnabled = false;
+    await save();
+    return reply(interaction, 'Welcome messages are off. Run `/welcome` again to turn them back on.');
+  }
+
+  const channelOption = interaction.options.getChannel('channel');
+  const message = interaction.options.getString('message');
+
+  let channel = channelOption
+    || (settings.welcomeChannelId ? interaction.guild.channels.cache.get(settings.welcomeChannelId) : null)
+    || interaction.guild.channels.cache.find(
+      (c) => c.type === ChannelType.GuildText && c.name.toLowerCase() === 'welcome',
+    );
+
+  if (!channel) {
+    channel = await interaction.guild.channels.create({
+      name: 'welcome',
+      type: ChannelType.GuildText,
+      topic: 'New members land here',
+      reason: 'CenterSide welcome setup',
+    });
+  }
+
+  settings.welcomeChannelId = channel.id;
+  settings.welcomeEnabled = true;
+  if (message) settings.welcomeMessage = message;
+  if (!settings.welcomeMessage) settings.welcomeMessage = '';
+  await save();
+
+  const preview = welcomeEmbed(interaction.member, settings, interaction.guild);
+
+  return reply(interaction, `Welcome messages will post in <#${channel.id}>. Preview:`, {
+    embeds: [preview],
+  });
+}
+
+/** Fired on guildMemberAdd. */
+async function handleMemberJoin(member) {
+  if (!member || member.user.bot) return;
+
+  const record = await guildRecord(member.guild.id);
+  const settings = record.settings;
+  if (!settings.welcomeEnabled || !settings.welcomeChannelId) return;
+
+  const channel = member.guild.channels.cache.get(settings.welcomeChannelId)
+    || await member.guild.channels.fetch(settings.welcomeChannelId).catch(() => null);
+  if (!channel || !channel.isTextBased()) return;
+
+  await channel.send({
+    content: `<@${member.id}>`,
+    embeds: [welcomeEmbed(member, settings, member.guild)],
+    allowedMentions: { parse: [] },
+  }).catch((err) => {
+    console.warn(`[welcome] failed for ${member.guild.id}: ${err.message}`);
+  });
+}
+
 /* ------------------------------------------------------------------ */
 /* /stats                                                              */
 /* ------------------------------------------------------------------ */
@@ -525,6 +592,7 @@ async function route(interaction, client) {
         case 'panel': return await handlePanel(interaction);
         case 'answer': return await handleAnswer(interaction);
         case 'answers': return await handleAnswers(interaction);
+        case 'welcome': return await handleWelcome(interaction);
         case 'stats': return await handleStats(interaction);
         default: return await reply(interaction, 'Unknown command — the bot may be running an older command set. Re-run `/setup` after the commands refresh.');
       }
@@ -551,4 +619,4 @@ async function route(interaction, client) {
   }
 }
 
-module.exports = { route, handleTicketMessage };
+module.exports = { route, handleTicketMessage, handleMemberJoin };

@@ -106,10 +106,35 @@ function ticketEmbed(ticket, extra = {}) {
   return embed;
 }
 
+/**
+ * The welcome embed is built here, not by the user — they only supply a line of
+ * text. Everything visual stays consistent across servers.
+ */
+function welcomeEmbed(member, settings, guild) {
+  const fallback = 'Take a look at the rules, grab your roles, and say hi. If you need help, open a ticket.';
+  const raw = String(settings.welcomeMessage || fallback).trim();
+  const text = raw
+    .replaceAll('{server}', guild.name)
+    .replaceAll('{count}', String(guild.memberCount))
+    .replaceAll('{user}', `<@${member.id}>`);
+
+  return baseEmbed()
+    .setColor(color.brand)
+    .setTitle(String(settings.welcomeTitle || `Welcome to ${guild.name}`).slice(0, 256))
+    .setDescription(`<@${member.id}> — ${text}`)
+    .setThumbnail(member.user.displayAvatarURL({ size: 256 }))
+    .addFields(
+      { name: 'Member', value: `#${guild.memberCount}`, inline: true },
+      { name: 'Joined', value: `<t:${Math.floor(Date.now() / 1000)}:R>`, inline: true },
+    )
+    .setTimestamp();
+}
+
 module.exports = {
   baseEmbed,
   panelMessage,
   ticketIntro,
   ticketButtons,
   ticketEmbed,
+  welcomeEmbed,
 };

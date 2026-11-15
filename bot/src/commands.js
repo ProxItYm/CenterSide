@@ -48,6 +48,21 @@ const commands = [
       .setDescription('Id of the answer to delete (leave blank to list them)')),
 
   new SlashCommandBuilder()
+    .setName('welcome')
+    .setDescription('Welcome new members with an embed the bot builds for you')
+    .setDefaultMemberPermissions(manage)
+    .addStringOption((option) => option
+      .setName('message')
+      .setDescription('Line under the welcome (supports {server} and {count})'))
+    .addChannelOption((option) => option
+      .setName('channel')
+      .setDescription('Where it posts (optional — one is created if missing)')
+      .addChannelTypes(ChannelType.GuildText))
+    .addBooleanOption((option) => option
+      .setName('off')
+      .setDescription('Turn welcome messages off')),
+
+  new SlashCommandBuilder()
     .setName('stats')
     .setDescription('Open tickets, closed tickets and who is carrying the desk')
     .setDefaultMemberPermissions(manage),

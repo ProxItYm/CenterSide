@@ -528,7 +528,7 @@
   <section class="hero">
     <div class="wrap hero-grid">
       <div>
-        <div class="eyebrow"><span class="dot"></span> v2.4 — knowledge packs &amp; SLA timers</div>
+        <div class="eyebrow"><span class="dot"></span> v2.5 — welcome embeds &amp; one-command setup</div>
         <h1>Support tickets that <span class="grad">answer themselves</span>.</h1>
         <p class="lede">
           CenterSide is the Discord ticket bot with a memory. Teach it what your server is about once —
@@ -660,6 +660,12 @@
           <div class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3M4.9 4.9 7 7M17 17l2.1 2.1M19.1 4.9 17 7M7 17l-2.1 2.1"/></svg></div>
           <h3>Handoff, not hijack</h3>
           <p>One message and the bot goes silent for that ticket. Staff take over, the transcript keeps recording, and the bot resumes only when the human closes it.</p>
+        </article>
+
+        <article class="feat reveal">
+          <div class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8a3 3 0 1 0-3-3"/><path d="M6 15a3 3 0 1 1-3 3"/><path d="M15 4a9 9 0 0 1-9 15"/><path d="M9 20a9 9 0 0 1 9-15"/></svg></div>
+          <h3>Welcome embeds, built in</h3>
+          <p>No embed builder to fight. <code>/welcome</code> writes the embed itself — avatar, member number, join timestamp, your line of copy — and makes <code>#welcome</code> if you do not have one.</p>
         </article>
       </div>
     </div>
@@ -858,6 +864,7 @@
         <div class="cmd-row"><div class="c">/panel</div><div class="d">Posts the lane dropdown in the current channel. That is the only thing members ever see.</div><div class="tag">admin</div></div>
         <div class="cmd-row"><div class="c">/answer</div><div class="d">Opens one form: the question members ask, and the answer the bot is allowed to give.</div><div class="tag">staff</div></div>
         <div class="cmd-row"><div class="c">/answers</div><div class="d">Lists every saved answer with its id. Pass an id to delete it.</div><div class="tag">staff</div></div>
+        <div class="cmd-row"><div class="c">/welcome</div><div class="d">Posts a welcome embed the bot builds for you — avatar, member count, join time. Creates <code>#welcome</code> if it is missing. You only write the line of text.</div><div class="tag">admin</div></div>
         <div class="cmd-row"><div class="c">/stats</div><div class="d">Open tickets, closed tickets, average resolution time and who is carrying the desk.</div><div class="tag">admin</div></div>
       </div>
     </div>
@@ -900,6 +907,7 @@
             <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg> SLA timers &amp; escalation lanes</li>
             <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg> Claim, transfer &amp; internal notes</li>
             <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg> One-command setup &amp; auto-created channels</li>
+            <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg> Built-in welcome embeds</li>
             <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg> Unlimited analytics history &amp; CSV export</li>
             <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg> Multiple servers with shared packs</li>
             <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg> Cross-server ticket handoff</li>

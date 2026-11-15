@@ -35,8 +35,9 @@ see on the site is what the bot says in a ticket.
 
 - Node.js 18.17 or newer
 - A Discord application with a bot user
-- Bot **privileged intent**: *Message Content* (needed to read the first message of a ticket and
-  auto-answer it). Enable it in the Developer Portal → Bot → Privileged Gateway Intents.
+- Bot **privileged intents**: *Message Content* (auto-answer) and *Server Members* (welcome messages).
+  Enable both in the Developer Portal → Bot → Privileged Gateway Intents. Missing either one only
+disables that feature — the bot logs it and keeps running.
 
 ### Required permissions
 
@@ -139,6 +140,7 @@ a small bot look enormous.
 | `/panel`   | Posts the ticket panel in the current channel.                               |
 | `/answer`  | One form: question members ask + answer the bot may give.                    |
 | `/answers` | Lists saved answers with ids; pass an id to delete it.                       |
+| `/welcome` | Posts a bot-built welcome embed; creates `#welcome` if missing.               |
 | `/stats`   | Open / closed counts, average resolution, staff leaderboard.                 |
 
 Everything a ticket needs is a button on the ticket itself:
@@ -149,6 +151,21 @@ Everything a ticket needs is a button on the ticket itself:
 | **Add user**| Gives another member access (modal, id or @mention).          |
 | **Escalate**| Pings the staff roles and flags the ticket.                   |
 | **Close**   | Writes the transcript, DMs the opener, deletes the channel.    |
+
+## Welcome messages
+
+```
+/welcome                       enable in #welcome (created if missing)
+/welcome message:Hey {user}!   set the line of copy
+/welcome channel:#general      post somewhere else
+/welcome off                   disable
+```
+
+The embed is built by the bot — title, avatar thumbnail, member number, join timestamp, brand colour.
+You never touch an embed builder. `{server}`, `{count}` and `{user}` get substituted in your line.
+
+Requires the **Server Members** intent (Developer Portal → Bot → Privileged Gateway Intents). Without
+it the bot still runs; it logs that welcome is off and keeps the desk going.
 
 ## Data
 

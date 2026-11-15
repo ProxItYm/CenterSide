@@ -5,7 +5,7 @@ require('dotenv').config();
 const { Client, GatewayIntentBits, Partials, Events } = require('discord.js');
 
 const config = require('./config');
-const { route, handleTicketMessage } = require('./handlers');
+const { route, handleTicketMessage, handleMemberJoin } = require('./handlers');
 const { loadPack } = require('./knowledge');
 const { setClient, restoreTimers, autoCloseStale } = require('./tickets');
 
@@ -14,17 +14,21 @@ if (!config.token) {
   process.exit(1);
 }
 
-function buildClient(withMessageContent) {
+function buildClient({ messageContent, members }) {
   const intents = [GatewayIntentBits.Guilds, GatewayIntentBits.GuildMessages];
-  if (withMessageContent) intents.push(GatewayIntentBits.MessageContent);
+  if (messageContent) intents.push(GatewayIntentBits.MessageContent);
+  if (members) intents.push(GatewayIntentBits.GuildMembers);
   return new Client({ intents, partials: [Partials.Channel] });
 }
 
-function wire(client, withMessageContent) {
+function wire(client, flags) {
   client.once(Events.ClientReady, async (ready) => {
     console.log(`[centerside] online as ${ready.user.tag} in ${ready.guilds.cache.size} guild(s)`);
-    if (!withMessageContent) {
-      console.warn('[centerside] Message Content intent is OFF — auto-answer is disabled until it is enabled in the Developer Portal (Bot → Privileged Gateway Intents). Tickets, panels, close, transcripts and stats all work.');
+    if (!flags.messageContent) {
+      console.warn('[centerside] Message Content intent is OFF — auto-answer is disabled. Enable it under Bot → Privileged Gateway Intents (you can keep the bot running).');
+    }
+    if (!flags.members) {
+      console.warn('[centerside] Server Members intent is OFF — welcome messages are disabled. Enable it in the same panel to turn them on.');
     }
 
     await restoreTimers(client).catch((err) => console.error('[ready] timer restore failed:', err.message));
@@ -47,31 +51,47 @@ function wire(client, withMessageContent) {
     }
   });
 
+  client.on(Events.GuildMemberAdd, (member) => {
+    if (!flags.members) return;
+    handleMemberJoin(member).catch((err) => console.error('[welcome]', err));
+  });
+
   client.on(Events.Error, (err) => console.error('[client]', err));
   client.on(Events.Warn, (msg) => console.warn('[warn]', msg));
   client.on(Events.GuildCreate, (guild) => console.log(`[centerside] joined ${guild.name} (${guild.id})`));
 }
 
-async function boot() {
-  let withMessageContent = true;
-  let client = buildClient(withMessageContent);
-  wire(client, withMessageContent);
+function isDisallowedIntents(err) {
+  return Boolean(err) && (err.code === 4014 || /disallowed intents/i.test(err.message || ''));
+}
 
-  try {
-    await client.login(config.token);
-  } catch (err) {
-    const disallowed = err && (err.code === 4014 || /disallowed intents/i.test(err.message || ''));
-    if (!disallowed) throw err;
-    console.warn('[centerside] login rejected: Message Content intent is not enabled for this application. Retrying without it.');
-    client.destroy();
-    withMessageContent = false;
-    client = buildClient(false);
-    wire(client, withMessageContent);
-    await client.login(config.token);
+async function boot() {
+  // Richest set first. A missing privileged intent in the Developer Portal is a
+  // portal setting, not a reason for the bot to be down: drop the feature, log
+  // it loudly, keep the desk running.
+  const attempts = [
+    { messageContent: true, members: true },
+    { messageContent: true, members: false },
+    { messageContent: false, members: false },
+  ];
+
+  let lastError;
+  for (const flags of attempts) {
+    const client = buildClient(flags);
+    wire(client, flags);
+    try {
+      await client.login(config.token);
+      setClient(client);
+      return client;
+    } catch (err) {
+      lastError = err;
+      if (!isDisallowedIntents(err)) throw err;
+      console.warn(`[centerside] login rejected for intents ${JSON.stringify(flags)} — retrying with less.`);
+      client.destroy();
+    }
   }
 
-  setClient(client);
-  return client;
+  throw lastError;
 }
 
 process.on('unhandledRejection', (err) => console.error('[unhandledRejection]', err));
