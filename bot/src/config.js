@@ -21,7 +21,7 @@ module.exports = {
   minConfidence: 3,
 
   // Reply cap per channel, milliseconds. Stops a bot loop turning into a spam loop.
-  autoReplyCooldownMs: 20_000,
+  autoReplyCooldownMs: Number(process.env.AUTO_REPLY_COOLDOWN_MS || 20_000),
 
   defaults: {
     categoryId: null,
@@ -50,5 +50,16 @@ module.exports = {
     warn: 0xfebc2e,
     danger: 0xff5f57,
     quiet: 0x0d1a33,
+  },
+
+  ai: {
+    // Opt-in. A local CPU model can take 100s per reply, so nothing is probed
+    // unless it is asked for; the built-in agent answers in milliseconds.
+    enabled: String(process.env.AI_ENABLED || 'false').toLowerCase() === 'true',
+    baseUrl: process.env.AI_BASE_URL || '',
+    apiKey: process.env.AI_API_KEY || '',
+    model: process.env.AI_MODEL || '',
+    // Local CPU models can take minutes; past this we use the built-in engine.
+    timeoutMs: Number(process.env.AI_TIMEOUT_MS || 12_000),
   },
 };

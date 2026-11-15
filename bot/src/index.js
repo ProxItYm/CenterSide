@@ -8,6 +8,7 @@ const config = require('./config');
 const { route, handleTicketMessage, handleMemberJoin } = require('./handlers');
 const { loadPack } = require('./knowledge');
 const { setClient, restoreTimers, autoCloseStale } = require('./tickets');
+const ai = require('./ai');
 
 if (!config.token) {
   console.error('DISCORD_TOKEN is missing. Copy .env.example to .env and fill it in.');
@@ -30,6 +31,9 @@ function wire(client, flags) {
     if (!flags.members) {
       console.warn('[centerside] Server Members intent is OFF — welcome messages are disabled. Enable it in the same panel to turn them on.');
     }
+
+    const engine = await ai.describeProvider().catch(() => null);
+    console.log(`[centerside] reply engine: ${engine || 'built-in conversational agent'}`);
 
     await restoreTimers(client).catch((err) => console.error('[ready] timer restore failed:', err.message));
 

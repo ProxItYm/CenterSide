@@ -81,8 +81,18 @@ async function updatePack(mutator) {
 
 function scoreAnswer(tokens, answer) {
   let score = 0;
+  let keywordHits = 0;
   const keywordSet = new Set((answer.keywords || []).map((k) => String(k).toLowerCase()));
-  for (const token of tokens) if (keywordSet.has(token)) score += 3;
+  for (const token of tokens) {
+    if (keywordSet.has(token)) {
+      score += 3;
+      keywordHits += 1;
+    }
+  }
+
+  // Word overlap alone is not evidence — three random words used to score a hit
+  // and produce a confident answer to a question nobody asked.
+  if (!keywordHits) return 0;
 
   const questionTokens = new Set(tokenize(answer.question));
   for (const token of tokens) if (questionTokens.has(token)) score += 1;

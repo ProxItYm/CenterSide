@@ -13,7 +13,7 @@ const {
   TextInputStyle,
 } = require('discord.js');
 
-const { panelCategories, color } = require('./config');
+const { panelCategories, color, autoReplyCooldownMs } = require('./config');
 const { panelMessage, baseEmbed, welcomeEmbed } = require('./ui');
 const {
   openTicket,
@@ -25,10 +25,17 @@ const {
 const {
   loadPack,
   updatePack,
-  composeReply,
   addAnswer,
   removeAnswer,
 } = require('./knowledge');
+const {
+  nextReply,
+  systemPrompt,
+  getHistory,
+  pushHistory,
+  clearHistory,
+} = require('./converse');
+const ai = require('./ai');
 const { guildRecord, settingsFor, save } = require('./state');
 
 const autoReplyAt = new Map();
@@ -404,6 +411,10 @@ async function handlePanelSelect(interaction) {
     return reply(interaction, 'That lane is no longer available.');
   }
 
+  // Channel creation + intro + pin can exceed Discord's 3s interaction window.
+  // Defer first, then answer through editReply.
+  await interaction.deferReply({ flags: MessageFlags.Ephemeral });
+
   const pack = await loadPack();
   const result = await openTicket({
     guild: interaction.guild,
@@ -412,8 +423,8 @@ async function handlePanelSelect(interaction) {
     pack,
   });
 
-  if (result.error) return reply(interaction, result.error);
-  return reply(interaction, `Ticket opened: <#${result.channel.id}>. Head there and describe the issue.`);
+  if (result.error) return interaction.editReply({ content: result.error });
+  return interaction.editReply({ content: `Ticket opened: <#${result.channel.id}>. Head there and describe the issue.` });
 }
 
 async function handleTicketButton(interaction) {
@@ -541,6 +552,7 @@ async function handleTicketMessage(message, pack) {
   // owners test their own desk — so opener messages still get an answer.
   if (isStaff(message.member, settings) && !isOpener) {
     ticket.slaSatisfied = true;
+    pushHistory(message.channelId, 'assistant', `(staff ${message.author.username} replied)`);
     await save();
     return;
   }
@@ -556,7 +568,7 @@ async function handleTicketMessage(message, pack) {
   }
 
   const last = autoReplyAt.get(message.channelId) || 0;
-  if (Date.now() - last < 20_000) {
+  if (Date.now() - last < autoReplyCooldownMs) {
     console.log(`[auto-answer] skipped #${ticket.number}: cooldown`);
     return;
   }
@@ -569,6 +581,8 @@ async function handleTicketMessage(message, pack) {
     autoReplyAt.set(message.channelId, Date.now());
     ticket.autoAttempts = 0;
     await save();
+    pushHistory(message.channelId, 'user', text);
+    pushHistory(message.channelId, 'assistant', 'acknowledged the resolution');
     console.log(`[auto-answer] #${ticket.number} resolved by member`);
     await message.reply({
       content: "Glad that's sorted. If anything else comes up, just reply here — I'll keep this open until you're done.",
@@ -577,27 +591,43 @@ async function handleTicketMessage(message, pack) {
     return;
   }
 
-  // A bare "hi" is not a support question — answer it like a person would.
-  if (/^(hi|hey|hello|yo|sup|hiya|hola|morning|good morning|evening)[\s!.,?]*$/i.test(text)) {
-    autoReplyAt.set(message.channelId, Date.now());
-    console.log(`[auto-answer] #${ticket.number} greeting`);
-    await message.reply({
-      content: `Hey <@${message.author.id}> — I'm here. Tell me what you need in one sentence (what happened, and what you expected) and I'll take it from there.`,
-      allowedMentions: { parse: [] },
-    }).catch(() => {});
-    return;
-  }
-
-  pack.__sla = slaLabel(settings.slaMinutes);
-  const attempt = ticket.autoAttempts || 0;
-  const result = composeReply(pack, text, message.author.username, attempt);
-  console.log(`[auto-answer] #${ticket.number} mode=${result.mode} matched=${result.matched ? result.matched.id : 'none'} attempt=${attempt}`);
-
+  pushHistory(message.channelId, 'user', text);
   autoReplyAt.set(message.channelId, Date.now());
 
+  const provider = await ai.describeProvider();
+  let result = null;
+
+  if (provider) {
+    await message.channel.sendTyping().catch(() => {});
+    const answer = await ai.complete({
+      system: systemPrompt(pack, ticket, settings),
+      messages: getHistory(message.channelId),
+      maxTokens: 240,
+    });
+
+    if (answer && /^ESCALATE\b/i.test(answer.trim())) {
+      result = {
+        mode: 'escalate',
+        text: "I'm going to hand this to a human — they can do things I can't. Pinging staff now, and the whole thread comes with it.",
+        escalateReason: 'model decided to hand off',
+      };
+    } else if (answer) {
+      result = { mode: 'answer', text: answer };
+    } else {
+      console.log(`[auto-answer] #${ticket.number} model unavailable, using built-in engine`);
+    }
+  }
+
+  if (!result) {
+    result = nextReply({ pack, ticket, text, memberName: message.author.username });
+  }
+
+  console.log(`[auto-answer] #${ticket.number} mode=${result.mode} engine=${provider ? 'model' : 'builtin'} asked=${(ticket.convo?.asked || []).join(',')}`);
+
   if (result.mode === 'clarify') {
-    ticket.autoAttempts = attempt + 1;
+    ticket.autoAttempts = (ticket.autoAttempts || 0) + 1;
     await save();
+    pushHistory(message.channelId, 'assistant', result.text);
     await message.reply({ content: result.text, allowedMentions: { parse: [] } }).catch(() => {});
     return;
   }
@@ -606,6 +636,7 @@ async function handleTicketMessage(message, pack) {
     ticket.autoAttempts = 0;
     ticket.autoAnswered = true;
     await save();
+    pushHistory(message.channelId, 'assistant', result.text);
     await message.reply({ content: result.text, allowedMentions: { parse: [] } }).catch(() => {});
     return;
   }
@@ -614,6 +645,7 @@ async function handleTicketMessage(message, pack) {
   ticket.escalated = true;
   ticket.autoAttempts = 0;
   await save();
+  pushHistory(message.channelId, 'assistant', result.text);
 
   const mention = (settings.staffRoleIds || []).map((id) => `<@&${id}>`).join(' ');
   await message.reply({ content: result.text, allowedMentions: { parse: [] } }).catch(() => {});

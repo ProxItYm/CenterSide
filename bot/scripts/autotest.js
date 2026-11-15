@@ -7,6 +7,9 @@
  * Run with: npm run autotest
  */
 
+process.env.AI_ENABLED = 'false';
+process.env.AUTO_REPLY_COOLDOWN_MS = '0';
+
 const path = require('node:path');
 const assert = require('node:assert');
 
@@ -81,7 +84,7 @@ function fakeMessage({ authorId, content, staff = false, member = true, channel 
     member: member ? { permissions: { has: () => false }, roles: { cache: { has: () => staff } } } : null,
     content,
     reply: async (payload) => { sent.push(payload); },
-    channel: { id: channel, send: async (payload) => { sent.push(payload); } },
+    channel: { id: channel, sendTyping: async () => {}, send: async (payload) => { sent.push(payload); } },
   };
 }
 
@@ -124,13 +127,25 @@ async function main() {
     assert.strictEqual(message.sent.length, 1, 'bot posted more than one message');
   });
 
-  await check('after three clarifying attempts it escalates', async () => {
-    record.tickets['chan-8'].autoAttempts = 3;
-    const message = fakeMessage({ authorId: 'opener-id', content: 'still not working, i do not know what to tell you', channel: 'chan-8' });
-    await handleTicketMessage(message, pack);
-    const said = message.sent.map((m) => m.content || '').join(' ');
-    assert(/human/i.test(said), 'never escalated after exhausting questions');
-    record.tickets['chan-8'].autoAttempts = 0;
+  await check('keeps asking, one question at a time, until it runs out', async () => {
+    const inputs = [
+      'my thing is broken and weird',
+      'no idea honestly',
+      'it just does not work at all',
+      'i already told you it is broken',
+      'still broken, nothing helps',
+    ];
+    let escalated = false;
+    let questions = 0;
+    for (const input of inputs) {
+      const message = fakeMessage({ authorId: 'opener-id', content: input, channel: 'chan-8' });
+      await handleTicketMessage(message, pack);
+      const said = message.sent.map((m) => m.content || '').join(' ');
+      if (/\?/.test(said)) questions += 1;
+      if (/human|pulling staff/i.test(said)) escalated = true;
+    }
+    assert(questions >= 2, `only ${questions} questions asked`);
+    assert(escalated, 'never escalated after exhausting the questions');
   });
 
   await check('chargeback escalates immediately', async () => {
@@ -155,11 +170,17 @@ async function main() {
     assert.strictEqual(record.tickets['chan-5'].slaSatisfied, true, 'SLA not marked satisfied');
   });
 
-  await check('a bare "Hi" still gets a spoken reply', async () => {
+  await check('a bare "Hi" gets a spoken reply', async () => {
     const message = fakeMessage({ authorId: 'opener-id', content: 'Hi', channel: 'chan-9' });
     await handleTicketMessage(message, pack);
     assert(message.sent.length >= 1, 'bot ignored a greeting');
-    assert(/tell me what you need/i.test(message.sent[0].content), 'greeting reply was not a prompt');
+  });
+
+  await check('it remembers what the member already said', async () => {
+    const first = fakeMessage({ authorId: 'opener-id', content: 'bought the asset pack, order NOVA12345', channel: 'chan-7' });
+    await handleTicketMessage(first, pack);
+    const facts = record.tickets['chan-7'].convo.facts;
+    assert.strictEqual(facts.order, 'NOVA12345', 'order id not captured');
   });
 
   await check('one-word question gets answered or escalated, never silence', async () => {
