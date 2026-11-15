@@ -70,6 +70,22 @@ check('knowledge:add', () => {
   return modal;
 });
 
+check('setup:intake (five question slots)', () => {
+  const modal = new ModalBuilder().setCustomId('setup:intake').setTitle('Ticket questions');
+  const questions = [
+    'What is the reason for opening this ticket?',
+    'Is it urgent or can it wait?',
+    'Please provide your USER ID',
+    'When did this start?',
+    'Anything else we should know?',
+  ];
+  questions.forEach((q, i) => {
+    modal.addComponents(new ActionRowBuilder().addComponents(new TextInputBuilder()
+      .setCustomId(`q${i}`).setLabel(q).setStyle(TextInputStyle.Short).setMaxLength(45).setRequired(false)));
+  });
+  return modal;
+});
+
 check('panel:intake:billing', () => {
   const modal = new ModalBuilder().setCustomId('panel:intake:billing').setTitle('Billing');
   modal.addComponents(

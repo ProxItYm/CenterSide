@@ -41,6 +41,21 @@ const web = require('./web');
 const { guildRecord, settingsFor, save } = require('./state');
 
 const autoReplyAt = new Map();
+
+const DEFAULT_INTAKE = [
+  'What is the reason for opening this ticket?',
+  'Is it urgent or can it wait?',
+  'Please provide your USER ID',
+];
+
+/** Configured questions, or the defaults, never more than five. */
+function intakeQuestions(settings) {
+  const configured = (settings.intakeQuestions || [])
+    .map((q) => String(q || '').trim())
+    .filter(Boolean)
+    .slice(0, 5);
+  return configured.length ? configured : DEFAULT_INTAKE;
+}
 const EPHEMERAL = { flags: MessageFlags.Ephemeral };
 
 function staffOnly(member, settings) {
@@ -180,29 +195,59 @@ function settingsEmbed(guild, settings) {
 async function handleSetup(interaction) {
   if (!(await ensureDescribed(interaction))) return;
 
+  const record = await guildRecord(interaction.guildId);
+  const current = intakeQuestions(record.settings);
+
+  const modal = new ModalBuilder().setCustomId('setup:intake').setTitle('Ticket questions');
+  const inputs = [];
+  for (let i = 0; i < 5; i += 1) {
+    inputs.push(new TextInputBuilder()
+      .setCustomId(`q${i}`)
+      .setLabel(`Question ${i + 1}${i > 2 ? ' (optional)' : ''}`)
+      .setStyle(TextInputStyle.Short)
+      .setMaxLength(45)
+      .setRequired(false)
+      .setValue(current[i] || ''));
+  }
+
+  modal.addComponents(...inputs.map((input) => new ActionRowBuilder().addComponents(input)));
+  return interaction.showModal(modal);
+}
+
+/** Saves the question set, then provisions channels + panel. */
+async function confirmSetup(interaction) {
   await interaction.deferReply({ flags: MessageFlags.Ephemeral });
+
+  const questions = [];
+  for (let i = 0; i < 5; i += 1) {
+    const value = interaction.fields.getTextInputValue(`q${i}`).trim();
+    if (value) questions.push(value.slice(0, 45));
+  }
 
   const record = await guildRecord(interaction.guildId);
   const settings = record.settings;
-  const guild = interaction.guild;
+  settings.intakeQuestions = questions;
+  await save();
 
+  const guild = interaction.guild;
   const category = await ensureCategory(guild, settings);
   const log = await ensureLogChannel(guild, settings, category, settings.staffRoleIds || []);
   await save();
-
   const built = await ensurePanelForGuild(guild).catch(() => null);
-  const pack = await loadPack();
 
   const embed = baseEmbed()
     .setColor(color.ok)
     .setTitle('CenterSide is set up')
-    .setDescription('Everything below exists. Nothing else to configure — members use the panel.')
+    .setDescription(
+      questions.length
+        ? `Members will be asked ${questions.length} question${questions.length === 1 ? '' : 's'} before a ticket opens:`
+        : 'No custom questions — members get the three default ones (reason, urgency, user id).',
+    )
     .addFields(
+      ...(questions.length ? [{ name: 'Ticket questions', value: questions.map((q, i) => `${i + 1}. ${q}`).join('\n') }] : []),
       { name: 'Tickets category', value: category ? `<#${category.id}>` : 'not set', inline: true },
       { name: 'Transcripts', value: log ? `<#${log.id}>` : 'not set', inline: true },
       { name: 'Panel', value: built ? `<#${built.channel.id}>` : 'not posted', inline: true },
-      { name: 'Staff role', value: (settings.staffRoleIds || []).map((id) => `<@&${id}>`).join(', ') || 'everyone with Manage Server', inline: true },
-      { name: 'Briefing', value: `${(pack.about || '').length} characters — change it with /describe`, inline: true },
     );
 
   return interaction.editReply({ embeds: [embed] });
@@ -520,49 +565,38 @@ async function handlePanelSelect(interaction) {
     return reply(interaction, 'That lane is no longer available.');
   }
 
-  // Ask the three questions before the channel exists. The modal must be the
-  // first response, so nothing is deferred here.
+  // Ask the configured questions before the channel exists. The modal must be
+  // the first response, so nothing is deferred here.
+  const questions = intakeQuestions(record.settings);
   const modal = new ModalBuilder()
     .setCustomId(`panel:intake:${category}`)
     .setTitle(panelCategories.find((c) => c.value === category)?.label || 'New ticket');
 
-  const reason = new TextInputBuilder()
-    .setCustomId('reason')
-    .setLabel('What is the reason for opening this ticket?')
-    .setStyle(TextInputStyle.Paragraph)
-    .setMaxLength(500)
-    .setRequired(true);
-
-  const urgency = new TextInputBuilder()
-    .setCustomId('urgency')
-    .setLabel('Is it urgent or can it wait?')
-    .setStyle(TextInputStyle.Short)
-    .setMaxLength(40)
-    .setRequired(true);
-
-  const userId = new TextInputBuilder()
-    .setCustomId('userid')
-    .setLabel('Please provide your USER ID')
-    .setStyle(TextInputStyle.Short)
-    .setMaxLength(40)
-    .setRequired(true);
-
-  modal.addComponents(
-    new ActionRowBuilder().addComponents(reason),
-    new ActionRowBuilder().addComponents(urgency),
-    new ActionRowBuilder().addComponents(userId),
-  );
+  questions.forEach((question, index) => {
+    modal.addComponents(new ActionRowBuilder().addComponents(
+      new TextInputBuilder()
+        .setCustomId(`q${index}`)
+        .setLabel(question.slice(0, 45))
+        .setStyle(index === 0 ? TextInputStyle.Paragraph : TextInputStyle.Short)
+        .setMaxLength(index === 0 ? 500 : 200)
+        .setRequired(true),
+    ));
+  });
 
   return interaction.showModal(modal);
 }
 
 async function handleIntake(interaction) {
   const lane = interaction.customId.split(':')[2];
-  const reason = interaction.fields.getTextInputValue('reason').trim();
-  const urgency = interaction.fields.getTextInputValue('urgency').trim();
-  const userId = interaction.fields.getTextInputValue('userid').trim();
 
   await interaction.deferReply({ flags: MessageFlags.Ephemeral });
+
+  const record = await guildRecord(interaction.guildId);
+  const questions = intakeQuestions(record.settings);
+  const answers = questions.map((question, index) => ({
+    question,
+    answer: interaction.fields.getTextInputValue(`q${index}`).trim(),
+  }));
 
   const pack = await loadPack();
   const result = await openTicket({
@@ -575,32 +609,33 @@ async function handleIntake(interaction) {
   if (result.error) return interaction.editReply({ content: result.error });
 
   const ticket = result.ticket;
-  ticket.intake = { reason, urgency, userId };
+  ticket.intake = answers;
   await save();
 
   await result.channel.send({
     embeds: [
       baseEmbed()
         .setColor(color.brand)
-        .setTitle('Why you are here')
-        .addFields(
-          { name: 'Reason', value: reason.slice(0, 1024) },
-          { name: 'Urgency', value: urgency.slice(0, 200), inline: true },
-          { name: 'User ID', value: `\`${userId.slice(0, 60)}\``, inline: true },
-        ),
+        .setTitle('Ticket answers')
+        .addFields(answers.map((entry, index) => ({
+          name: entry.question.slice(0, 256),
+          value: entry.answer.slice(0, 1024) || '—',
+          inline: index > 0,
+        }))),
     ],
   }).catch(() => {});
 
-  // Answer the stated reason immediately instead of waiting for another message.
+  const digest = answers.map((a) => `${a.question} ${a.answer}`).join(' | ');
+
   await answerIntake({
     channel: result.channel,
     ticket,
     pack,
-    settings: await settingsFor(interaction.guildId),
+    settings: record.settings,
     guild: interaction.guild,
     memberName: interaction.member?.displayName || interaction.user.username,
-    reason,
-    urgency,
+    reason: digest,
+    urgency: answers[1] ? answers[1].answer : '',
   }).catch((err) => console.error('[intake] answer failed:', err.message));
 
   return interaction.editReply({ content: `Ticket opened: <#${result.channel.id}>` });
@@ -708,6 +743,7 @@ async function handleTicketButton(interaction) {
 }
 
 async function handleModal(interaction) {
+  if (interaction.customId === 'setup:intake') return confirmSetup(interaction);
   if (interaction.customId.startsWith('panel:intake:')) return handleIntake(interaction);
 
   if (interaction.customId === 'ticket:addmember') {
