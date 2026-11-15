@@ -316,7 +316,6 @@ module.exports = {
   closeTicket,
   touchTicket,
   isStaff,
-  authStaff: isStaff,
   autoCloseStale,
   restoreTimers,
   setClient,

@@ -13,7 +13,7 @@ const {
 } = require('discord.js');
 
 const { panelCategories, color } = require('./config');
-const { panelMessage, baseEmbed, ticketEmbed } = require('./ui');
+const { panelMessage, baseEmbed } = require('./ui');
 const {
   openTicket,
   claimTicket,
