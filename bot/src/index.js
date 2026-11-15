@@ -9,6 +9,7 @@ const { route, handleTicketMessage, handleMemberJoin } = require('./handlers');
 const { loadPack } = require('./knowledge');
 const { setClient, autoCloseStale } = require('./tickets');
 const ai = require('./ai');
+const serverInfo = require('./serverinfo');
 
 if (!config.token) {
   console.error('DISCORD_TOKEN is missing. Copy .env.example to .env and fill it in.');
@@ -61,7 +62,16 @@ function wire(client, flags) {
 
   client.on(Events.Error, (err) => console.error('[client]', err));
   client.on(Events.Warn, (msg) => console.warn('[warn]', msg));
-  client.on(Events.GuildCreate, (guild) => console.log(`[centerside] joined ${guild.name} (${guild.id})`));
+  client.on(Events.GuildCreate, (guild) => {
+    console.log(`[centerside] joined ${guild.name} (${guild.id})`);
+    serverInfo.invalidate(guild.id);
+  });
+  client.on(Events.ChannelCreate, (channel) => serverInfo.invalidate(channel.guildId));
+  client.on(Events.ChannelDelete, (channel) => serverInfo.invalidate(channel.guildId));
+  client.on(Events.ChannelUpdate, (_, channel) => serverInfo.invalidate(channel.guildId));
+  client.on(Events.GuildRoleCreate, (role) => serverInfo.invalidate(role.guild.id));
+  client.on(Events.GuildRoleDelete, (role) => serverInfo.invalidate(role.guild.id));
+  client.on(Events.GuildRoleUpdate, (_, role) => serverInfo.invalidate(role.guild.id));
 }
 
 function isDisallowedIntents(err) {

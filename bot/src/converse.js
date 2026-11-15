@@ -170,7 +170,7 @@ function nextReply({ pack, ticket, text, memberName }) {
 }
 
 /** System prompt for the language-model path. */
-function systemPrompt(pack, ticket, settings) {
+function systemPrompt(pack, ticket, settings, serverMap = '') {
   const answers = (pack.answers || [])
     .map((a) => `Q: ${a.question}\nA: ${a.answer}`)
     .join('\n\n');
@@ -192,6 +192,8 @@ function systemPrompt(pack, ticket, settings) {
     '- No markdown headings, no bullet lists unless listing steps.',
     `- If the member asks for a human, or the issue is a chargeback, legal threat, hacked account, or you are going in circles, reply with the word ESCALATE on its own line and nothing else.`,
     `- The ticket lane is "${ticket.category}".`,
+    serverMap ? `\n${serverMap}` : '',
+    serverMap ? '\nThe server map above is live and authoritative. If someone asks where a channel or role is, answer from it and use the exact names. If something they mention is not in it, say plainly that it does not exist and offer to have staff create it — never invent channel names, categories, commands or roles.' : '',
   ].filter(Boolean).join('\n');
 }
 

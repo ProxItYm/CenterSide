@@ -36,6 +36,7 @@ const {
   clearHistory,
 } = require('./converse');
 const ai = require('./ai');
+const serverInfo = require('./serverinfo');
 const { guildRecord, settingsFor, save } = require('./state');
 
 const autoReplyAt = new Map();
@@ -610,8 +611,9 @@ async function handleTicketMessage(message, pack) {
     };
   } else if (provider) {
     await message.channel.sendTyping().catch(() => {});
+    const serverMap = await serverInfo.snapshot(message.guild);
     const answer = await ai.complete({
-      system: systemPrompt(pack, ticket, settings),
+      system: systemPrompt(pack, ticket, settings, serverMap),
       messages: getHistory(message.channelId),
       maxTokens: 240,
     });
