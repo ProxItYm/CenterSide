@@ -170,7 +170,7 @@ function nextReply({ pack, ticket, text, memberName }) {
 }
 
 /** System prompt for the language-model path. */
-function systemPrompt(pack, ticket, settings, serverMap = '') {
+function systemPrompt(pack, ticket, settings, serverMap = '', ticketInfo = '') {
   const answers = (pack.answers || [])
     .map((a) => `Q: ${a.question}\nA: ${a.answer}`)
     .join('\n\n');
@@ -190,8 +190,11 @@ function systemPrompt(pack, ticket, settings, serverMap = '') {
     '- If you do not know, say so plainly and ask the single most useful question.',
     '- Never invent prices, links, policies or timelines.',
     '- No markdown headings, no bullet lists unless listing steps.',
-    `- If the member asks for a human, or the issue is a chargeback, legal threat, hacked account, or you are going in circles, reply with the word ESCALATE on its own line and nothing else.`,
+    '- Do not escalate because a message is rude, confusing or short. Answer it anyway.',
+    '- ESCALATE is only for: a chargeback or legal threat, a hacked/compromised account, or an explicit request to speak to a human. It is never for a question about where something is in this server.',
+    '- If you cannot answer, ask one clarifying question first. Escalating is the last resort, not the second.',
     `- The ticket lane is "${ticket.category}".`,
+    ticketInfo ? `Ticket context: ${ticketInfo}` : '',
     serverMap ? `\n${serverMap}` : '',
     serverMap ? '\nThe server map above is live and authoritative. If someone asks where a channel or role is, answer from it and use the exact names. If something they mention is not in it, say plainly that it does not exist and offer to have staff create it — never invent channel names, categories, commands or roles.' : '',
   ].filter(Boolean).join('\n');

@@ -233,6 +233,11 @@ async function handlePanel(interaction) {
   }
 
   await interaction.channel.send(panelMessage());
+
+  const record = await guildRecord(interaction.guildId);
+  record.settings.panelChannelId = interaction.channelId;
+  await save();
+
   return reply(interaction, 'Panel posted. Members pick a lane and get a private channel.');
 }
 
@@ -612,11 +617,45 @@ async function handleTicketMessage(message, pack) {
   } else if (provider) {
     await message.channel.sendTyping().catch(() => {});
     const serverMap = await serverInfo.snapshot(message.guild);
-    const answer = await ai.complete({
-      system: systemPrompt(pack, ticket, settings, serverMap),
+
+    const panelChannel = settings.panelChannelId
+      ? message.guild.channels.cache.get(settings.panelChannelId)
+      : null;
+    const ticketCategory = settings.categoryId
+      ? message.guild.channels.cache.get(settings.categoryId)
+      : null;
+    const logChannel = settings.logChannelId
+      ? message.guild.channels.cache.get(settings.logChannelId)
+      : null;
+
+    const ticketInfo = [
+      panelChannel
+        ? `The ticket panel — the message where members pick a lane — is posted in #${panelChannel.name}.`
+        : 'No ticket panel has been posted yet; staff need to run /panel in the support channel.',
+      'Members open a ticket by picking a lane from that panel dropdown. They do not run slash commands; only staff use commands.',
+      ticketCategory ? `New tickets are created under the "${ticketCategory.name}" category.` : '',
+      `This conversation is happening in #${message.channel.name}.`,
+      logChannel ? `Transcripts are archived in #${logChannel.name}.` : '',
+    ].filter(Boolean).join(' ');
+
+    let answer = await ai.complete({
+      system: systemPrompt(pack, ticket, settings, serverMap, ticketInfo),
       messages: getHistory(message.channelId),
       maxTokens: 240,
     });
+
+    // A model handing off to a question it can actually answer is worse than a
+    // second attempt. Ask again, explicitly without the escape hatch.
+    if (answer && /^\s*ESCALATE\b/i.test(answer.trim())) {
+      const retry = await ai.complete({
+        system: `${systemPrompt(pack, ticket, settings, serverMap, ticketInfo)}
+
+Do not escalate. The member's question is answerable from the server map and ticket context above. Answer it directly in two sentences, naming the exact channel. If it genuinely is not answerable, ask one clarifying question instead.`,
+        messages: getHistory(message.channelId),
+        maxTokens: 240,
+      });
+      if (retry && !/^\s*ESCALATE\b/i.test(retry.trim())) answer = retry;
+    }
 
     if (answer && /^ESCALATE\b/i.test(answer.trim())) {
       result = {
