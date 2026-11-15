@@ -324,6 +324,9 @@ async function ensurePanelForGuild(guild) {
   const settings = record.settings;
   settings.guildName = guild.name;
 
+  // No description, no panel. Nothing on the desk before the briefing exists.
+  if (!settings.describedAt) return null;
+
   if (settings.panelChannelId && settings.panelMessageId) {
     const existingChannel = guild.channels.cache.get(settings.panelChannelId);
     if (existingChannel) {

@@ -38,8 +38,8 @@ function wire(client, flags) {
 
     for (const guild of ready.guilds.cache.values()) {
       try {
-        const { channel } = await ensurePanelForGuild(guild);
-        console.log(`[centerside] panel ready in #${channel.name} (${guild.name})`);
+        const built = await ensurePanelForGuild(guild);
+        if (built) console.log(`[centerside] panel ready in #${built.channel.name} (${guild.name})`);
       } catch (err) {
         console.error(`[panel] ${guild.name}: ${err.message}`);
       }
