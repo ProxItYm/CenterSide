@@ -51,6 +51,8 @@ const record = {
     'chan-5': makeTicket('chan-5', 5),
     'chan-6': makeTicket('chan-6', 6),
     'chan-7': makeTicket('chan-7', 7),
+    'chan-8': makeTicket('chan-8', 8),
+    'chan-9': makeTicket('chan-9', 9),
   },
   history: [],
 };
@@ -112,11 +114,30 @@ async function main() {
     assert(message.sent.length >= 1, 'staff opener got no reply');
   });
 
-  await check('unmatched question still speaks (escalation reply)', async () => {
+  await check('unknown question asks for detail instead of pinging staff', async () => {
     const message = fakeMessage({ authorId: 'opener-id', content: 'what is the airspeed velocity of a swallow', channel: 'chan-3' });
     await handleTicketMessage(message, pack);
-    assert(message.sent.length >= 1, 'no escalation reply');
-    assert(/human|take over|escalat/i.test(message.sent.map((m) => m.content || '').join(' ')), 'reply did not mention a human');
+    const said = message.sent.map((m) => m.content || '').join(' ');
+    assert(message.sent.length >= 1, 'bot said nothing');
+    assert(/\?/.test(said), 'bot did not ask a question');
+    assert(!/<@&/.test(said), 'bot pinged staff over an unknown question');
+    assert.strictEqual(message.sent.length, 1, 'bot posted more than one message');
+  });
+
+  await check('after three clarifying attempts it escalates', async () => {
+    record.tickets['chan-8'].autoAttempts = 3;
+    const message = fakeMessage({ authorId: 'opener-id', content: 'still not working, i do not know what to tell you', channel: 'chan-8' });
+    await handleTicketMessage(message, pack);
+    const said = message.sent.map((m) => m.content || '').join(' ');
+    assert(/human/i.test(said), 'never escalated after exhausting questions');
+    record.tickets['chan-8'].autoAttempts = 0;
+  });
+
+  await check('chargeback escalates immediately', async () => {
+    const message = fakeMessage({ authorId: 'opener-id', content: 'i am calling my bank for a chargeback', channel: 'chan-6' });
+    await handleTicketMessage(message, pack);
+    const said = message.sent.map((m) => m.content || '').join(' ');
+    assert(/human|staff/i.test(said), 'chargeback did not escalate');
   });
 
   await check('claimed ticket stays silent', async () => {
@@ -135,7 +156,7 @@ async function main() {
   });
 
   await check('a bare "Hi" still gets a spoken reply', async () => {
-    const message = fakeMessage({ authorId: 'opener-id', content: 'Hi', channel: 'chan-6' });
+    const message = fakeMessage({ authorId: 'opener-id', content: 'Hi', channel: 'chan-9' });
     await handleTicketMessage(message, pack);
     assert(message.sent.length >= 1, 'bot ignored a greeting');
     assert(/tell me what you need/i.test(message.sent[0].content), 'greeting reply was not a prompt');

@@ -25,7 +25,7 @@ const {
 const {
   loadPack,
   updatePack,
-  buildAnswer,
+  composeReply,
   addAnswer,
   removeAnswer,
 } = require('./knowledge');
@@ -561,51 +561,79 @@ async function handleTicketMessage(message, pack) {
     return;
   }
 
-  const text = message.content || '';
-  if (!text.trim()) return;
+  const text = (message.content || '').trim();
+  if (!text) return;
+
+  const thanks = /\b(thanks|thank you|ty|that worked|it worked|fixed|solved|sorted|got it|all good)\b/i.test(text);
+  if (thanks && ticket.autoAnswered) {
+    autoReplyAt.set(message.channelId, Date.now());
+    ticket.autoAttempts = 0;
+    await save();
+    console.log(`[auto-answer] #${ticket.number} resolved by member`);
+    await message.reply({
+      content: "Glad that's sorted. If anything else comes up, just reply here — I'll keep this open until you're done.",
+      allowedMentions: { parse: [] },
+    }).catch(() => {});
+    return;
+  }
 
   // A bare "hi" is not a support question — answer it like a person would.
-  if (/^(hi|hey|hello|yo|sup|hiya|hola|morning|good morning|evening)[\s!.,?]*$/i.test(text.trim())) {
+  if (/^(hi|hey|hello|yo|sup|hiya|hola|morning|good morning|evening)[\s!.,?]*$/i.test(text)) {
     autoReplyAt.set(message.channelId, Date.now());
     console.log(`[auto-answer] #${ticket.number} greeting`);
     await message.reply({
-      content: `Hey <@${message.author.id}> — I'm here. Tell me what you need in one sentence (what happened, and what you expected) and I'll either answer it straight away or pull a human in.`,
+      content: `Hey <@${message.author.id}> — I'm here. Tell me what you need in one sentence (what happened, and what you expected) and I'll take it from there.`,
       allowedMentions: { parse: [] },
     }).catch(() => {});
     return;
   }
 
   pack.__sla = slaLabel(settings.slaMinutes);
-  const result = buildAnswer(pack, text, message.author.username);
-  console.log(`[auto-answer] #${ticket.number} matched=${result.matched ? result.matched.id : 'none'} escalate=${result.escalate}`);
-  if (!result.matched && !result.escalate) return;
+  const attempt = ticket.autoAttempts || 0;
+  const result = composeReply(pack, text, message.author.username, attempt);
+  console.log(`[auto-answer] #${ticket.number} mode=${result.mode} matched=${result.matched ? result.matched.id : 'none'} attempt=${attempt}`);
 
   autoReplyAt.set(message.channelId, Date.now());
-  const mention = result.escalate
-    ? (settings.staffRoleIds || []).map((id) => `<@&${id}>`).join(' ')
-    : '';
 
-  await message.reply({
-    content: result.text.slice(0, 1900),
+  if (result.mode === 'clarify') {
+    ticket.autoAttempts = attempt + 1;
+    await save();
+    await message.reply({ content: result.text, allowedMentions: { parse: [] } }).catch(() => {});
+    return;
+  }
+
+  if (result.mode === 'answer') {
+    ticket.autoAttempts = 0;
+    ticket.autoAnswered = true;
+    await save();
+    await message.reply({ content: result.text, allowedMentions: { parse: [] } }).catch(() => {});
+    return;
+  }
+
+  // mode === 'escalate': only now does a human get pulled in.
+  ticket.escalated = true;
+  ticket.autoAttempts = 0;
+  await save();
+
+  const mention = (settings.staffRoleIds || []).map((id) => `<@&${id}>`).join(' ');
+  await message.reply({ content: result.text, allowedMentions: { parse: [] } }).catch(() => {});
+
+  await message.channel.send({
+    content: mention || undefined,
+    embeds: [
+      baseEmbed()
+        .setColor(color.warn)
+        .setTitle(`Ticket #${ticket.number} needs a human`)
+        .setDescription(result.escalateReason
+          ? `Reason: ${result.escalateReason}`
+          : 'The bot ran out of answers.')
+        .addFields(
+          { name: 'Opener', value: `<@${ticket.userId}>`, inline: true },
+          { name: 'Lane', value: String(ticket.category), inline: true },
+        ),
+    ],
     allowedMentions: { parse: mention ? ['roles'] : [] },
   }).catch(() => {});
-
-  if (result.escalate) {
-    ticket.escalated = true;
-    await save();
-    await message.channel.send({
-      content: mention || undefined,
-      embeds: [
-        baseEmbed()
-          .setColor(color.warn)
-          .setTitle('Escalated by the desk')
-          .setDescription(result.escalateReason
-            ? `Reason: ${result.escalateReason}`
-            : 'No approved answer matched — a human should take this one.'),
-      ],
-      allowedMentions: { parse: mention ? ['roles'] : [] },
-    }).catch(() => {});
-  }
 }
 
 /* ------------------------------------------------------------------ */

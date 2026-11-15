@@ -10,7 +10,7 @@ const os = require('node:os');
 const path = require('node:path');
 const assert = require('node:assert');
 
-const { loadPack, buildAnswer, findAnswer, keywordsFor, updatePack, addAnswer, removeAnswer } = require('../src/knowledge');
+const { loadPack, buildAnswer, composeReply, findAnswer, keywordsFor, updatePack, addAnswer, removeAnswer } = require('../src/knowledge');
 const { JsonStore, EMPTY_STATE, guildState } = require('../src/store');
 
 let failures = 0;
@@ -58,9 +58,23 @@ async function main() {
     assert.match(String(result.escalateReason), /chargeback/);
   });
 
-  check('tone changes the opener', () => {
-    const formal = buildAnswer({ ...pack, tone: 'Professional' }, 'refund please');
-    assert.match(formal.text, /^\*\*Hello /);
+  check('tone changes the clarifying opener', () => {
+    const formal = composeReply({ ...pack, tone: 'Professional' }, 'something about quantum fog', 'there', 0);
+    assert.strictEqual(formal.mode, 'clarify');
+    assert.match(formal.text, /^Hello /);
+  });
+
+  check('clarify asks a question instead of escalating', () => {
+    const reply = composeReply(pack, 'my thing is weird', 'there', 0);
+    assert.strictEqual(reply.mode, 'clarify');
+    assert.match(reply.text, /\?/);
+  });
+
+  check('escalates only after the bot runs out of questions', () => {
+    const first = composeReply(pack, 'my thing is weird', 'there', 0);
+    const third = composeReply(pack, 'my thing is weird', 'there', 3);
+    assert.strictEqual(first.mode, 'clarify');
+    assert.strictEqual(third.mode, 'escalate');
   });
 
   check('keywordsFor drops stopwords', () => {

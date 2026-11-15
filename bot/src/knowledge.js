@@ -122,39 +122,88 @@ function shouldEscalate(pack, question) {
 }
 
 /**
- * Builds the first reply from the pack only. No model call, no invented policy:
- * if nothing scores high enough it says so and escalates.
+ * Conversational first responder.
+ *
+ * Order of operations: answer if the pack knows it, ask a sharper question if it
+ * does not, and only involve a human once the bot has genuinely run out of things
+ * to ask — or the member names something that must never be handled by a bot.
  */
-function buildAnswer(pack, question, memberName = 'there') {
-  const opener = (OPENERS[pack.tone] || OPENERS['Friendly & casual']).replace('{name}', memberName);
-  const hours = String(pack.hours || '').trim() || 'normal support hours';
+function composeReply(pack, question, memberName = 'there', attempt = 0) {
   const hit = findAnswer(pack, question);
-  const escalateTrigger = shouldEscalate(pack, question);
+  const trigger = shouldEscalate(pack, question);
+  const hours = String(pack.hours || '').trim() || 'normal support hours';
+  const name = memberName;
 
-  let body;
-  if (hit) {
-    body = hit.answer.answer;
-  } else {
-    const about = firstSentence(pack.about);
-    body = [
-      about ? `Quick context so you know who you are talking to: ${about}` : '',
-      'I do not have an approved answer for that exact question, so rather than guess I am pulling a human in.',
-    ].filter(Boolean).join(' ');
+  if (trigger) {
+    return {
+      mode: 'escalate',
+      text: `**I'm getting a human on this one.** Anything involving ${trigger} goes to staff directly — that is not something I should handle. Someone is on the way, and the transcript is already saved.`,
+      matched: hit ? hit.answer : null,
+      escalateReason: trigger,
+    };
   }
 
-  const closing = hit && !escalateTrigger
-    ? `If that does not match what you are seeing, reply here and I will pull a human in. First reply target is ${pack.__sla || '15 minutes'} during ${hours}.`
-    : `A human takes over from here — target ${pack.__sla || '15 minutes'} during ${hours}.`;
+  if (hit) {
+    return {
+      mode: 'answer',
+      text: `**${hit.answer.answer}**\n\nDid that sort it? If not, tell me what happened when you tried — I'll keep digging. Support hours: ${hours}.`,
+      matched: hit.answer,
+      confidence: hit.score,
+      escalateReason: null,
+    };
+  }
 
-  const text = `**${opener}** ${body} ${closing}`;
-  const flagged = Boolean(escalateTrigger) || !hit;
+  // Nothing matched: keep the conversation going instead of pinging staff.
+  if (attempt >= 3) {
+    return {
+      mode: 'escalate',
+      text: `I've asked everything the handbook can answer and we're still not there — **pulling a human in now.** They can see the whole conversation, so no need to repeat yourself. Support hours: ${hours}.`,
+      matched: null,
+      escalateReason: 'no answer after several attempts',
+    };
+  }
+
+  const text = String(question).toLowerCase();
+  let questionBack;
+
+  if (/refund|money|pay|bought|purchase|order|card|charge|subscri|role/.test(text)) {
+    questionBack = 'Which product or order is it, and what did you pay with? A receipt or order id is perfect — I can check the role sync and the exact status from that.';
+  } else if (/error|broken|bug|crash|not work|doesn.t work|failed|issue|problem|stuck|lag/.test(text)) {
+    questionBack = 'What exactly happens, and where — which command, channel or screen? The exact error text or a screenshot is the fastest way to the answer.';
+  } else if (/how|where|when|can i|do i/.test(text)) {
+    questionBack = 'Can you tell me a bit more — what are you trying to do, and what are you seeing right now? One or two sentences is enough.';
+  } else {
+    questionBack = 'What happened, and what did you expect instead? One or two sentences is plenty.';
+  }
+
+  const leads = {
+    'Friendly & casual': `Hi ${name} — I want to get this right before I hand you off.`,
+    Professional: `Hello ${name}. So I can answer accurately rather than guess:`,
+    'Short & blunt': `${name} — need a bit more before I can answer.`,
+    Playful: `Hey ${name} — help me help you.`,
+  };
+  const lead = leads[pack.tone] || leads['Friendly & casual'];
 
   return {
-    text,
-    matched: hit ? hit.answer : null,
-    confidence: hit ? hit.score : 0,
-    escalate: flagged,
-    escalateReason: escalateTrigger,
+    mode: 'clarify',
+    text: `${lead} ${questionBack}`,
+    matched: null,
+    escalateReason: null,
+  };
+}
+
+/**
+ * Builds the first reply from the pack only. No model call, no invented policy.
+ * Kept for callers that want a one-shot answer (tests, previews).
+ */
+function buildAnswer(pack, question, memberName = 'there') {
+  const reply = composeReply(pack, question, memberName, 9);
+  return {
+    text: reply.text,
+    matched: reply.matched,
+    confidence: reply.confidence || 0,
+    escalate: reply.mode === 'escalate',
+    escalateReason: reply.escalateReason,
   };
 }
 
@@ -181,6 +230,7 @@ module.exports = {
   savePack,
   updatePack,
   buildAnswer,
+  composeReply,
   findAnswer,
   shouldEscalate,
   keywordsFor,
