@@ -535,24 +535,38 @@ async function handleTicketMessage(message, pack) {
   ticket.lastActivity = Date.now();
   await save();
 
-  if (isStaff(message.member, settings)) {
+  const isOpener = message.author.id === ticket.userId;
+
+  // Staff replying is the SLA being met. The opener is allowed to be staff too —
+  // owners test their own desk — so opener messages still get an answer.
+  if (isStaff(message.member, settings) && !isOpener) {
     ticket.slaSatisfied = true;
     await save();
     return;
   }
 
-  if (!settings.autoAnswer) return;
-  if (ticket.userId !== message.author.id) return;
-  if (ticket.claimedBy) return;
+  if (!settings.autoAnswer) {
+    console.log(`[auto-answer] skipped #${ticket.number}: autoanswer is off`);
+    return;
+  }
+  if (!isOpener) return;
+  if (ticket.claimedBy) {
+    console.log(`[auto-answer] skipped #${ticket.number}: claimed by ${ticket.claimedBy}`);
+    return;
+  }
 
   const last = autoReplyAt.get(message.channelId) || 0;
-  if (Date.now() - last < 20_000) return;
+  if (Date.now() - last < 20_000) {
+    console.log(`[auto-answer] skipped #${ticket.number}: cooldown`);
+    return;
+  }
 
   const text = message.content || '';
-  if (text.trim().length < 8) return;
+  if (text.trim().length < 4) return;
 
   pack.__sla = slaLabel(settings.slaMinutes);
   const result = buildAnswer(pack, text, message.author.username);
+  console.log(`[auto-answer] #${ticket.number} matched=${result.matched ? result.matched.id : 'none'} escalate=${result.escalate}`);
   if (!result.matched && !result.escalate) return;
 
   autoReplyAt.set(message.channelId, Date.now());
