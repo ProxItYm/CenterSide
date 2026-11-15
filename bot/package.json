@@ -1,0 +1,21 @@
+{
+  "name": "centerside",
+  "version": "1.0.0",
+  "private": true,
+  "description": "CenterSide — Discord ticket bot with a server knowledge pack",
+  "main": "src/index.js",
+  "scripts": {
+    "start": "node src/index.js",
+    "deploy": "node src/deploy-commands.js",
+    "selftest": "node scripts/selftest.js",
+    "check": "node --check src/index.js",
+    "dev": "node --watch src/index.js"
+  },
+  "engines": {
+    "node": ">=18.17"
+  },
+  "dependencies": {
+    "discord.js": "^14.16.3",
+    "dotenv": "^16.4.5"
+  }
+}

@@ -1,0 +1,78 @@
+{
+  "server": "Nova Labs",
+  "about": "A Roblox development community for scripters, builders and UI designers. We host weekly build jams, share open-source modules in #resources, and run a small paid asset store. Most tickets are about missing purchases, script errors, or how to join the jam.",
+  "tone": "Friendly & casual",
+  "hours": "9am–11pm CET, 7 days",
+  "hardFacts": "The asset store is store.novalabs.gg. Refunds only within 14 days and only for duplicate purchases. Never promise a release date for the jam map.",
+  "escalateWhen": "chargeback, legal threat, compromised account, missing purchase longer than 2 hours",
+  "answers": [
+    {
+      "id": "a1",
+      "question": "How do I get my purchase role?",
+      "answer": "Roles sync automatically within a minute of checkout on store.novalabs.gg. If it's been longer than that, we fix it by hand — no need to buy again.",
+      "keywords": [
+        "purchase",
+        "role",
+        "bought",
+        "buy",
+        "missing",
+        "sync",
+        "checkout"
+      ]
+    },
+    {
+      "id": "a2",
+      "question": "Where are my files after buying?",
+      "answer": "Your download link is emailed instantly and also lives under Purchases on store.novalabs.gg. Check spam before we resend.",
+      "keywords": [
+        "file",
+        "files",
+        "download",
+        "link",
+        "purchases",
+        "email",
+        "sent"
+      ]
+    },
+    {
+      "id": "a3",
+      "question": "Can I get a refund?",
+      "answer": "Refunds are given for duplicate purchases within 14 days. Open one ticket per order and include the order ID from the receipt.",
+      "keywords": [
+        "refund",
+        "money",
+        "chargeback",
+        "cancel",
+        "duplicate",
+        "receipt"
+      ]
+    },
+    {
+      "id": "a4",
+      "question": "When does the build jam start?",
+      "answer": "Build jams run every Saturday at 18:00 CET. The theme drops in #announcements an hour before and submissions close Sunday night.",
+      "keywords": [
+        "jam",
+        "build",
+        "event",
+        "start",
+        "saturday",
+        "theme",
+        "submissions"
+      ]
+    },
+    {
+      "id": "a5",
+      "question": "How do I report a member?",
+      "answer": "Open a ticket in the 'Report a member' lane. Only moderators can see it. Include screenshots and message links if you have them.",
+      "keywords": [
+        "report",
+        "member",
+        "moderator",
+        "abuse",
+        "rule",
+        "broken"
+      ]
+    }
+  ]
+}

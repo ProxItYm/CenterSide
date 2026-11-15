@@ -1,0 +1,109 @@
+'use strict';
+
+const {
+  EmbedBuilder,
+  ActionRowBuilder,
+  StringSelectMenuBuilder,
+  ButtonBuilder,
+  ButtonStyle,
+} = require('discord.js');
+
+const { color, panelCategories } = require('./config');
+
+function baseEmbed() {
+  return new EmbedBuilder().setColor(color.brand).setFooter({ text: 'CenterSide' });
+}
+
+/** The persistent panel: a select menu plus a rules line. No state needed. */
+function panelMessage() {
+  const embed = baseEmbed()
+    .setTitle('CenterSide support')
+    .setDescription(
+      [
+        'Open a private ticket and a member of staff will be with you.',
+        '',
+        '**Before you open one**',
+        '• Check #rules and the pinned messages — the answer may already be there.',
+        '• One issue per ticket. Reply in the ticket instead of opening a second one.',
+        '• Never post passwords, tokens or payment details.',
+        '',
+        'Pick a lane below and the desk does the rest.',
+      ].join('\n'),
+    );
+
+  const menu = new StringSelectMenuBuilder()
+    .setCustomId('panel:open')
+    .setPlaceholder('Choose a ticket category…')
+    .addOptions(panelCategories.map((category) => ({
+      label: category.label,
+      value: category.value,
+      description: category.description,
+    })));
+
+  return {
+    embeds: [embed],
+    components: [new ActionRowBuilder().addComponents(menu)],
+  };
+}
+
+/** Intro embed posted inside a freshly opened ticket. */
+function ticketIntro(ticket, pack, openerId) {
+  const lane = panelCategories.find((c) => c.value === ticket.category);
+  const embed = baseEmbed()
+    .setTitle(`${lane ? lane.label : 'Ticket'} · #${ticket.number}`)
+    .setDescription(
+      [
+        `<@${openerId}> — ticket opened. Describe the issue in this channel and the desk will pick it up.`,
+        '',
+        pack.about ? `**About this server:** ${pack.about}` : '',
+        pack.hours ? `**Support hours:** ${pack.hours}` : '',
+      ].filter(Boolean).join('\n'),
+    )
+    .addFields({ name: 'Status', value: 'Open', inline: true });
+
+  return embed;
+}
+
+/** Buttons that ride on the intro message. */
+function ticketButtons() {
+  const claim = new ButtonBuilder()
+    .setCustomId('ticket:claim')
+    .setLabel('Claim')
+    .setEmoji('🙋')
+    .setStyle(ButtonStyle.Primary);
+
+  const escalate = new ButtonBuilder()
+    .setCustomId('ticket:escalate')
+    .setLabel('Escalate')
+    .setEmoji('🚨')
+    .setStyle(ButtonStyle.Secondary);
+
+  const close = new ButtonBuilder()
+    .setCustomId('ticket:close')
+    .setLabel('Close')
+    .setEmoji('🔒')
+    .setStyle(ButtonStyle.Danger);
+
+  return [new ActionRowBuilder().addComponents(claim, escalate, close)];
+}
+
+function ticketEmbed(ticket, extra = {}) {
+  const embed = baseEmbed()
+    .setTitle(`Ticket #${ticket.number} · ${ticket.category}`)
+    .addFields(
+      { name: 'Opened by', value: `<@${ticket.userId}>`, inline: true },
+      { name: 'Status', value: ticket.status === 'closed' ? 'Closed' : ticket.claimedBy ? 'Claimed' : 'Open', inline: true },
+      { name: 'Claimed by', value: ticket.claimedBy ? `<@${ticket.claimedBy}>` : '—', inline: true },
+    );
+  if (extra.description) embed.setDescription(extra.description);
+  if (extra.color) embed.setColor(extra.color);
+  return embed;
+}
+
+module.exports = {
+  baseEmbed,
+  panelMessage,
+  ticketIntro,
+  ticketButtons,
+  ticketEmbed,
+};
