@@ -47,6 +47,22 @@ function staffOnly(member, settings) {
   return 'Staff only — you need the staff role set in `/setup`, or Manage Server.';
 }
 
+async function safeReply(message, content) {
+  try {
+    await message.reply({ content, allowedMentions: { parse: [] } });
+    return true;
+  } catch (err) {
+    console.error(`[auto-answer] reply failed in #${message.channel?.name}: ${err.message}`);
+    try {
+      await message.channel.send({ content, allowedMentions: { parse: [] } });
+      return true;
+    } catch (second) {
+      console.error(`[auto-answer] fallback send failed: ${second.message}`);
+      return false;
+    }
+  }
+}
+
 async function reply(interaction, content, extra = {}) {
   if (interaction.deferred || interaction.replied) {
     return interaction.followUp({ content, ...EPHEMERAL, ...extra });
@@ -606,8 +622,35 @@ async function handleTicketMessage(message, pack) {
   if (message.author.bot || !message.guildId) return;
 
   const record = await guildRecord(message.guildId);
-  const ticket = record.tickets[message.channelId];
-  if (!ticket || ticket.status === 'closed') return;
+  let ticket = record.tickets[message.channelId];
+
+  // A ticket channel the bot lost track of (state write dropped, bot restarted
+  // mid-creation) used to make the bot go silent. Adopt it from the channel topic.
+  if (!ticket) {
+    const topic = message.channel.topic || '';
+    const parsed = topic.match(/Ticket #(\d+) · ([^·]+) ·.*\((\d+)\)/);
+    if (!parsed) {
+      console.log(`[auto-answer] ignored #${message.channel.name}: not a tracked ticket`);
+      return;
+    }
+    ticket = {
+      id: message.channelId,
+      number: Number(parsed[1]),
+      userId: parsed[3],
+      category: parsed[2].trim(),
+      status: 'open',
+      claimedBy: null,
+      createdAt: Date.now(),
+      lastActivity: Date.now(),
+      escalated: false,
+      notes: [],
+    };
+    record.tickets[message.channelId] = ticket;
+    await save();
+    console.log(`[auto-answer] adopted #${message.channel.name} as ticket #${ticket.number}`);
+  }
+
+  if (ticket.status === 'closed') return;
 
   const settings = record.settings;
   ticket.lastActivity = Date.now();
@@ -640,7 +683,11 @@ async function handleTicketMessage(message, pack) {
   }
 
   const text = (message.content || '').trim();
-  if (!text) return;
+  if (!text) {
+    console.log(`[auto-answer] #${ticket.number} empty content — is the Message Content intent on?`);
+    return;
+  }
+  console.log(`[auto-answer] #${ticket.number} received ${text.length} chars`);
 
   const thanks = /\b(thanks|thank you|ty|that worked|it worked|fixed|solved|sorted|got it|all good)\b/i.test(text);
   if (thanks && ticket.autoAnswered) {
@@ -650,10 +697,7 @@ async function handleTicketMessage(message, pack) {
     pushHistory(message.channelId, 'user', text);
     pushHistory(message.channelId, 'assistant', 'acknowledged the resolution');
     console.log(`[auto-answer] #${ticket.number} resolved by member`);
-    await message.reply({
-      content: "Glad that's sorted. If anything else comes up, just reply here — I'll keep this open until you're done.",
-      allowedMentions: { parse: [] },
-    }).catch(() => {});
+    await safeReply(message, "Glad that's sorted. If anything else comes up, just reply here — I'll keep this open until you're done.");
     return;
   }
 
@@ -676,7 +720,7 @@ async function handleTicketMessage(message, pack) {
     pushHistory(message.channelId, 'assistant', answer);
     autoReplyAt.set(message.channelId, Date.now());
     console.log(`[auto-answer] #${ticket.number} panel question answered directly`);
-    await message.reply({ content: answer, allowedMentions: { parse: [] } }).catch(() => {});
+    await safeReply(message, answer);
     return;
   }
 
@@ -766,7 +810,7 @@ Do not escalate. The member's question is answerable from the server map and tic
     ticket.autoAttempts = (ticket.autoAttempts || 0) + 1;
     await save();
     pushHistory(message.channelId, 'assistant', result.text);
-    await message.reply({ content: result.text, allowedMentions: { parse: [] } }).catch(() => {});
+    await safeReply(message, result.text);
     return;
   }
 
@@ -775,7 +819,7 @@ Do not escalate. The member's question is answerable from the server map and tic
     ticket.autoAnswered = true;
     await save();
     pushHistory(message.channelId, 'assistant', result.text);
-    await message.reply({ content: result.text, allowedMentions: { parse: [] } }).catch(() => {});
+    await safeReply(message, result.text);
     return;
   }
 
@@ -786,7 +830,7 @@ Do not escalate. The member's question is answerable from the server map and tic
   pushHistory(message.channelId, 'assistant', result.text);
 
   const mention = (settings.staffRoleIds || []).map((id) => `<@&${id}>`).join(' ');
-  await message.reply({ content: result.text, allowedMentions: { parse: [] } }).catch(() => {});
+  await safeReply(message, result.text);
 
   await message.channel.send({
     content: mention || undefined,
