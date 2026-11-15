@@ -597,7 +597,8 @@ async function handleTicketMessage(message, pack) {
 
   // Hard triggers and an explicit request for a person never reach the model.
   const trigger = shouldEscalate(pack, text);
-  const wantsHuman = /\b(human|real person|staff member|moderator|admin|support agent)\b/i.test(text);
+  // "can I report a staff member" is a report, not a hand-off request.
+  const wantsHuman = /\b(?:speak|talk|chat)\s+(?:to|with)\s+(?:a\s+)?(?:human|person|someone|staff|mod|admin|agent)\b|\bget\s+me\s+a\s+(?:human|person|staff)\b|\breal\s+person\b|\bhuman\s+(?:please|pls|now)\b/i.test(text);
   const provider = await ai.describeProvider();
   let result = null;
 

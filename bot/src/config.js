@@ -21,7 +21,9 @@ module.exports = {
   minConfidence: 3,
 
   // Reply cap per channel, milliseconds. Stops a bot loop turning into a spam loop.
-  autoReplyCooldownMs: Number(process.env.AUTO_REPLY_COOLDOWN_MS || 20_000),
+  // 1.2s only exists to stop a bot-on-bot loop. Anything longer reads as the
+  // bot ignoring the member mid-conversation.
+  autoReplyCooldownMs: Number(process.env.AUTO_REPLY_COOLDOWN_MS || 1_200),
 
   defaults: {
     categoryId: null,
