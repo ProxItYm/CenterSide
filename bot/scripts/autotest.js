@@ -49,6 +49,8 @@ const record = {
     'chan-3': makeTicket('chan-3', 3),
     'chan-4': makeTicket('chan-4', 4),
     'chan-5': makeTicket('chan-5', 5),
+    'chan-6': makeTicket('chan-6', 6),
+    'chan-7': makeTicket('chan-7', 7),
   },
   history: [],
 };
@@ -130,6 +132,19 @@ async function main() {
     await handleTicketMessage(message, pack);
     assert.strictEqual(message.sent.length, 0, 'bot spoke over staff');
     assert.strictEqual(record.tickets['chan-5'].slaSatisfied, true, 'SLA not marked satisfied');
+  });
+
+  await check('a bare "Hi" still gets a spoken reply', async () => {
+    const message = fakeMessage({ authorId: 'opener-id', content: 'Hi', channel: 'chan-6' });
+    await handleTicketMessage(message, pack);
+    assert(message.sent.length >= 1, 'bot ignored a greeting');
+    assert(/tell me what you need/i.test(message.sent[0].content), 'greeting reply was not a prompt');
+  });
+
+  await check('one-word question gets answered or escalated, never silence', async () => {
+    const message = fakeMessage({ authorId: 'opener-id', content: 'refund', channel: 'chan-7' });
+    await handleTicketMessage(message, pack);
+    assert(message.sent.length >= 1, 'bot ignored a short but real question');
   });
 
   await check('non-ticket channel is ignored', async () => {

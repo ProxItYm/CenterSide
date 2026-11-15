@@ -562,7 +562,18 @@ async function handleTicketMessage(message, pack) {
   }
 
   const text = message.content || '';
-  if (text.trim().length < 4) return;
+  if (!text.trim()) return;
+
+  // A bare "hi" is not a support question — answer it like a person would.
+  if (/^(hi|hey|hello|yo|sup|hiya|hola|morning|good morning|evening)[\s!.,?]*$/i.test(text.trim())) {
+    autoReplyAt.set(message.channelId, Date.now());
+    console.log(`[auto-answer] #${ticket.number} greeting`);
+    await message.reply({
+      content: `Hey <@${message.author.id}> — I'm here. Tell me what you need in one sentence (what happened, and what you expected) and I'll either answer it straight away or pull a human in.`,
+      allowedMentions: { parse: [] },
+    }).catch(() => {});
+    return;
+  }
 
   pack.__sla = slaLabel(settings.slaMinutes);
   const result = buildAnswer(pack, text, message.author.username);
