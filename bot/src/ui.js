@@ -55,7 +55,7 @@ function ticketIntro(ticket, pack, openerId) {
       [
         `Hi <@${openerId}> — this is your private ticket. Only you, the staff and I can see it.`,
         '',
-        '**Write what you need in your next message.** One or two sentences is plenty — I answer the ones I already know, and pull a human in for the rest.',
+        'Your answers from the ticket form are below. Add anything else you want in this channel — I answer what I can and pull a human in for the rest.',
         '',
         pack.about ? `**About this server:** ${pack.about}` : '',
         pack.hours ? `**Support hours:** ${pack.hours}` : '',

@@ -1,9 +1,9 @@
 {
-  "server": "",
-  "about": "",
-  "tone": "",
-  "hours": "",
-  "hardFacts": "",
-  "escalateWhen": "",
+  "server": "CenterSide",
+  "about": "a",
+  "tone": "a",
+  "hours": "a",
+  "hardFacts": "TESTING",
+  "escalateWhen": "a",
   "answers": []
 }

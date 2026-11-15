@@ -70,6 +70,22 @@ check('knowledge:add', () => {
   return modal;
 });
 
+check('panel:intake:billing', () => {
+  const modal = new ModalBuilder().setCustomId('panel:intake:billing').setTitle('Billing');
+  modal.addComponents(
+    new ActionRowBuilder().addComponents(new TextInputBuilder()
+      .setCustomId('reason').setLabel('What is the reason for opening this ticket?')
+      .setStyle(TextInputStyle.Paragraph).setMaxLength(500).setRequired(true)),
+    new ActionRowBuilder().addComponents(new TextInputBuilder()
+      .setCustomId('urgency').setLabel('Is it urgent or can it wait?')
+      .setStyle(TextInputStyle.Short).setMaxLength(40).setRequired(true)),
+    new ActionRowBuilder().addComponents(new TextInputBuilder()
+      .setCustomId('userid').setLabel('Please provide your USER ID')
+      .setStyle(TextInputStyle.Short).setMaxLength(40).setRequired(true)),
+  );
+  return modal;
+});
+
 check('ticket:addmember', () => {
   const modal = new ModalBuilder().setCustomId('ticket:addmember').setTitle('Add someone to this ticket');
   modal.addComponents(new ActionRowBuilder().addComponents(new TextInputBuilder()

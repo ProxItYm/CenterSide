@@ -179,49 +179,33 @@ function settingsEmbed(guild, settings) {
 
 async function handleSetup(interaction) {
   if (!(await ensureDescribed(interaction))) return;
+
+  await interaction.deferReply({ flags: MessageFlags.Ephemeral });
+
+  const record = await guildRecord(interaction.guildId);
+  const settings = record.settings;
+  const guild = interaction.guild;
+
+  const category = await ensureCategory(guild, settings);
+  const log = await ensureLogChannel(guild, settings, category, settings.staffRoleIds || []);
+  await save();
+
+  const built = await ensurePanelForGuild(guild).catch(() => null);
   const pack = await loadPack();
-  const modal = new ModalBuilder().setCustomId('setup:brief').setTitle('Tell the bot about your server');
 
-  const about = new TextInputBuilder()
-    .setCustomId('about')
-    .setLabel('What is this server about?')
-    .setStyle(TextInputStyle.Paragraph)
-    .setMaxLength(700)
-    .setRequired(true)
-    .setValue(pack.about || '');
+  const embed = baseEmbed()
+    .setColor(color.ok)
+    .setTitle('CenterSide is set up')
+    .setDescription('Everything below exists. Nothing else to configure — members use the panel.')
+    .addFields(
+      { name: 'Tickets category', value: category ? `<#${category.id}>` : 'not set', inline: true },
+      { name: 'Transcripts', value: log ? `<#${log.id}>` : 'not set', inline: true },
+      { name: 'Panel', value: built ? `<#${built.channel.id}>` : 'not posted', inline: true },
+      { name: 'Staff role', value: (settings.staffRoleIds || []).map((id) => `<@&${id}>`).join(', ') || 'everyone with Manage Server', inline: true },
+      { name: 'Briefing', value: `${(pack.about || '').length} characters — change it with /describe`, inline: true },
+    );
 
-  const tone = new TextInputBuilder()
-    .setCustomId('tone')
-    .setLabel('Tone of voice')
-    .setStyle(TextInputStyle.Short)
-    .setMaxLength(40)
-    .setRequired(false)
-    .setValue(pack.tone || '');
-
-  const hours = new TextInputBuilder()
-    .setCustomId('hours')
-    .setLabel('Support hours')
-    .setStyle(TextInputStyle.Short)
-    .setMaxLength(70)
-    .setRequired(false)
-    .setValue(pack.hours || '');
-
-  const escalate = new TextInputBuilder()
-    .setCustomId('escalate')
-    .setLabel('Hand it to a human when someone mentions…')
-    .setStyle(TextInputStyle.Short)
-    .setMaxLength(300)
-    .setRequired(false)
-    .setValue(pack.escalateWhen || '');
-
-  modal.addComponents(
-    new ActionRowBuilder().addComponents(about),
-    new ActionRowBuilder().addComponents(tone),
-    new ActionRowBuilder().addComponents(hours),
-    new ActionRowBuilder().addComponents(escalate),
-  );
-
-  await interaction.showModal(modal);
+  return interaction.editReply({ embeds: [embed] });
 }
 
 async function handleEdit(interaction) {
@@ -258,52 +242,6 @@ async function handleEdit(interaction) {
   }
 
   return reply(interaction, '', { embeds: [settingsEmbed(interaction.guild, settings)] });
-}
-
-async function confirmSetup(interaction) {
-  await interaction.deferReply({ flags: MessageFlags.Ephemeral });
-
-  const about = interaction.fields.getTextInputValue('about').trim();
-  const tone = interaction.fields.getTextInputValue('tone').trim() || 'Friendly & casual';
-  const hours = interaction.fields.getTextInputValue('hours').trim();
-  const escalate = interaction.fields.getTextInputValue('escalate').trim();
-
-  await updatePack((pack) => {
-    pack.server = pack.server || interaction.guild.name;
-    pack.about = about;
-    pack.tone = tone;
-    pack.hours = hours;
-    pack.escalateWhen = escalate;
-  });
-
-  const record = await guildRecord(interaction.guildId);
-  const settings = record.settings;
-
-  const category = await ensureCategory(interaction.guild, settings);
-  await ensureLogChannel(interaction.guild, settings, category, settings.staffRoleIds || []);
-  await save();
-
-  await ensurePanelForGuild(interaction.guild).catch((err) => {
-    console.error('[setup] panel creation failed:', err.message);
-  });
-
-  const pack = await loadPack();
-
-  const embed = baseEmbed()
-    .setColor(color.ok)
-    .setTitle('CenterSide is set up')
-    .setDescription('Everything below was created or saved automatically. Nothing else to configure.')
-    .addFields(
-      { name: 'Tickets', value: settings.categoryId ? `<#${settings.categoryId}>` : 'not set', inline: true },
-      { name: 'Transcripts', value: settings.logChannelId ? `<#${settings.logChannelId}>` : 'not set', inline: true },
-      { name: 'Staff role', value: (settings.staffRoleIds || []).map((id) => `<@&${id}>`).join(', ') || 'everyone with Manage Server', inline: true },
-      { name: 'Tone', value: tone, inline: true },
-      { name: 'Hours', value: hours || 'not set', inline: true },
-      { name: 'Briefing', value: `${pack.about.length} characters saved`, inline: true },
-    )
-    .setFooter({ text: 'Next: run /panel in your support channel' });
-
-  return interaction.editReply({ embeds: [embed, settingsEmbed(interaction.guild, settings)] });
 }
 
 /* ------------------------------------------------------------------ */
@@ -582,20 +520,122 @@ async function handlePanelSelect(interaction) {
     return reply(interaction, 'That lane is no longer available.');
   }
 
-  // Channel creation + intro + pin can exceed Discord's 3s interaction window.
-  // Defer first, then answer through editReply.
+  // Ask the three questions before the channel exists. The modal must be the
+  // first response, so nothing is deferred here.
+  const modal = new ModalBuilder()
+    .setCustomId(`panel:intake:${category}`)
+    .setTitle(panelCategories.find((c) => c.value === category)?.label || 'New ticket');
+
+  const reason = new TextInputBuilder()
+    .setCustomId('reason')
+    .setLabel('What is the reason for opening this ticket?')
+    .setStyle(TextInputStyle.Paragraph)
+    .setMaxLength(500)
+    .setRequired(true);
+
+  const urgency = new TextInputBuilder()
+    .setCustomId('urgency')
+    .setLabel('Is it urgent or can it wait?')
+    .setStyle(TextInputStyle.Short)
+    .setMaxLength(40)
+    .setRequired(true);
+
+  const userId = new TextInputBuilder()
+    .setCustomId('userid')
+    .setLabel('Please provide your USER ID')
+    .setStyle(TextInputStyle.Short)
+    .setMaxLength(40)
+    .setRequired(true);
+
+  modal.addComponents(
+    new ActionRowBuilder().addComponents(reason),
+    new ActionRowBuilder().addComponents(urgency),
+    new ActionRowBuilder().addComponents(userId),
+  );
+
+  return interaction.showModal(modal);
+}
+
+async function handleIntake(interaction) {
+  const lane = interaction.customId.split(':')[2];
+  const reason = interaction.fields.getTextInputValue('reason').trim();
+  const urgency = interaction.fields.getTextInputValue('urgency').trim();
+  const userId = interaction.fields.getTextInputValue('userid').trim();
+
   await interaction.deferReply({ flags: MessageFlags.Ephemeral });
 
   const pack = await loadPack();
   const result = await openTicket({
     guild: interaction.guild,
     member: interaction.member,
-    category,
+    category: lane,
     pack,
   });
 
   if (result.error) return interaction.editReply({ content: result.error });
-  return interaction.editReply({ content: `Ticket opened: <#${result.channel.id}>. Head there and describe the issue.` });
+
+  const ticket = result.ticket;
+  ticket.intake = { reason, urgency, userId };
+  await save();
+
+  await result.channel.send({
+    embeds: [
+      baseEmbed()
+        .setColor(color.brand)
+        .setTitle('Why you are here')
+        .addFields(
+          { name: 'Reason', value: reason.slice(0, 1024) },
+          { name: 'Urgency', value: urgency.slice(0, 200), inline: true },
+          { name: 'User ID', value: `\`${userId.slice(0, 60)}\``, inline: true },
+        ),
+    ],
+  }).catch(() => {});
+
+  // Answer the stated reason immediately instead of waiting for another message.
+  await answerIntake({
+    channel: result.channel,
+    ticket,
+    pack,
+    settings: await settingsFor(interaction.guildId),
+    guild: interaction.guild,
+    memberName: interaction.member?.displayName || interaction.user.username,
+    reason,
+    urgency,
+  }).catch((err) => console.error('[intake] answer failed:', err.message));
+
+  return interaction.editReply({ content: `Ticket opened: <#${result.channel.id}>` });
+}
+
+async function answerIntake({ channel, ticket, pack, settings, guild, memberName, reason, urgency }) {
+  pushHistory(channel.id, 'user', reason);
+
+  let text = null;
+  const provider = await ai.describeProvider();
+  if (provider) {
+    await channel.sendTyping().catch(() => {});
+    const serverMap = await serverInfo.snapshot(guild);
+    text = await ai.complete({
+      system: systemPrompt(pack, ticket, settings, serverMap, `This is a new ticket. The member already answered the intake form: "${reason}" (urgency: ${urgency}).`),
+      messages: getHistory(channel.id),
+      maxTokens: 220,
+    });
+    if (text && /^\s*ESCALATE\b/i.test(text.trim())) text = null;
+  }
+
+  if (!text) {
+    const replyResult = nextReply({ pack, ticket, text: `${reason} ${urgency}`, memberName });
+    text = replyResult.text;
+    if (replyResult.mode === 'escalate') {
+      const mention = (settings.staffRoleIds || []).map((id) => `<@&${id}>`).join(' ');
+      await channel.send({ content: mention || undefined, embeds: [baseEmbed().setColor(color.warn).setTitle('Needs a human').setDescription(replyResult.text)] }).catch(() => {});
+      return;
+    }
+  }
+
+  ticket.autoAnswered = true;
+  await save();
+  pushHistory(channel.id, 'assistant', text);
+  await channel.send({ content: text.slice(0, 1900), allowedMentions: { parse: [] } }).catch(() => {});
 }
 
 async function handleTicketButton(interaction) {
@@ -668,7 +708,7 @@ async function handleTicketButton(interaction) {
 }
 
 async function handleModal(interaction) {
-  if (interaction.customId === 'setup:brief') return confirmSetup(interaction);
+  if (interaction.customId.startsWith('panel:intake:')) return handleIntake(interaction);
 
   if (interaction.customId === 'ticket:addmember') {
     const raw = interaction.fields.getTextInputValue('member').trim();
