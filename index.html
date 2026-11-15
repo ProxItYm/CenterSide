@@ -330,13 +330,42 @@
   .step code{font-size:12.5px;padding:2px 6px;border-radius:5px;background:rgba(37,217,255,.1);color:#a8e8ff;border:1px solid rgba(37,217,255,.2)}
 
   /* ---------- commands ---------- */
-  .cmd-table{border-radius:var(--radius);border:1px solid var(--line);overflow:hidden;background:rgba(9,17,34,.6)}
-  .cmd-row{display:grid;grid-template-columns:230px 1fr auto;gap:18px;align-items:center;padding:15px 22px;border-bottom:1px solid rgba(120,180,255,.08);transition:background .2s}
-  .cmd-row:last-child{border-bottom:0}
-  .cmd-row:hover{background:rgba(37,217,255,.045)}
-  .cmd-row .c{font-family:ui-monospace, "SF Mono", Menlo, monospace;font-size:13px;color:#8bf0ff}
-  .cmd-row .d{font-size:13.5px;color:var(--muted)}
-  .cmd-row .tag{font-size:10.5px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted-2);border:1px solid var(--line);padding:3px 8px;border-radius:5px}
+  /* ---------- command cards ---------- */
+  .cmds-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:22px}
+  .cmd-card{
+    padding:24px 24px 20px;border-radius:var(--radius);border:1px solid var(--line);
+    background:linear-gradient(165deg, rgba(16,33,65,.7), rgba(9,17,34,.8));
+    transition:border-color .25s ease, transform .25s ease;
+  }
+  .cmd-card:hover{border-color:rgba(37,217,255,.38);transform:translateY(-2px)}
+  .cmd-head{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:12px}
+  .cmd-head code{
+    font-family:ui-monospace,"SF Mono",Menlo,monospace;font-size:14.5px;color:#8bf0ff;
+    background:rgba(37,217,255,.08);border:1px solid rgba(37,217,255,.22);
+    padding:4px 9px;border-radius:7px;
+  }
+  .cmd-card p{margin:0 0 10px;font-size:14px;color:var(--muted);line-height:1.6}
+  .cmd-card p.ex{
+    margin:0;font-family:ui-monospace,"SF Mono",Menlo,monospace;font-size:12px;
+    color:#7fd9c8;background:rgba(95,255,224,.06);border-left:2px solid rgba(95,255,224,.35);
+    padding:8px 10px;border-radius:0 6px 6px 0;word-break:break-word;
+  }
+  .opts{list-style:none;margin:0 0 12px;padding:0;display:flex;flex-direction:column;gap:6px}
+  .opts li{font-size:12.8px;color:#a9c1e0;line-height:1.5}
+  .opts li code{color:#8bf0ff;font-family:ui-monospace,Menlo,monospace;font-size:12px}
+  .cmd-card .tag{font-size:10px;letter-spacing:.1em;text-transform:uppercase;padding:3px 8px;border-radius:5px;border:1px solid var(--line)}
+  .cmd-card .tag.admin{color:#bfe9ff;border-color:rgba(37,217,255,.3);background:rgba(37,217,255,.08)}
+  .cmd-card .tag.staff{color:#f0b8ff;border-color:rgba(255,46,230,.3);background:rgba(255,46,230,.08)}
+
+  .buttons-note{border:1px solid var(--line);border-radius:var(--radius);padding:24px;background:rgba(9,17,34,.5)}
+  .buttons-note h3{font-family:var(--font-display);font-size:15px;margin:0 0 14px;font-weight:600}
+  .btnrow{display:grid;grid-template-columns:1fr 1fr;gap:10px 20px}
+  .btnrow span{font-size:13.5px;color:var(--muted)}
+  .btnrow b{color:#dff2ff;font-weight:600}
+
+  @media (max-width:900px){
+    .cmds-grid,.btnrow{grid-template-columns:1fr}
+  }
 
   /* ---------- free ---------- */
   .free-band{
@@ -440,8 +469,6 @@
     .hero{padding:64px 0 20px}
     .feat-grid,.steps{grid-template-columns:1fr}
     .feat.wide{grid-column:span 1}
-    .cmd-row{grid-template-columns:1fr;gap:6px;padding:16px 18px}
-    .cmd-row .tag{justify-self:start}
     .cta-band{padding:44px 24px}
     .float-badge.b1{right:0;top:auto;bottom:-16px;font-size:11px}
     .float-badge.b2{display:none}
@@ -855,19 +882,84 @@
     <div class="wrap">
       <div class="sec-head reveal">
         <div class="kicker">Command reference</div>
-        <h2>Six commands, plus one page.</h2>
-        <p>No config maze, no fifteen options to wire up. One setup command provisions the channels for you, and the rest are the four things a desk actually does.</p>
+        <h2>Every command, written out.</h2>
+        <p>Eight commands, each with its exact options and an example — this page is the manual, so the bot does not need to be a maze of slash commands to learn.</p>
       </div>
 
-      <div class="cmd-table reveal">
-        <div class="cmd-row"><div class="c">/setup</div><div class="d">The whole setup. Creates the Tickets category and a private #transcripts channel, saves your server briefing, sets the staff role. Options: <code>staff</code>, <code>category</code>, <code>log</code> — all optional.</div><div class="tag">admin</div></div>
-        <div class="cmd-row"><div class="c">/describe</div><div class="d">Replies with a private page — served by your bot — where you write the whole briefing and manage every saved answer in one form.</div><div class="tag">admin</div></div>
-        <div class="cmd-row"><div class="c">/edit</div><div class="d">Change one thing after setup: log channel, ticket category, staff role, welcome channel, or reopen the briefing.</div><div class="tag">admin</div></div>
-        <div class="cmd-row"><div class="c">/panel</div><div class="d">Posts the lane dropdown in the current channel. That is the only thing members ever see.</div><div class="tag">admin</div></div>
-        <div class="cmd-row"><div class="c">/answer</div><div class="d">Opens one form: the question members ask, and the answer the bot is allowed to give.</div><div class="tag">staff</div></div>
-        <div class="cmd-row"><div class="c">/answers</div><div class="d">Lists every saved answer with its id. Pass an id to delete it.</div><div class="tag">staff</div></div>
-        <div class="cmd-row"><div class="c">/welcome</div><div class="d">Posts a welcome embed the bot builds for you — avatar, member count, join time. Creates <code>#welcome</code> if it is missing. You only write the line of text.</div><div class="tag">admin</div></div>
-        <div class="cmd-row"><div class="c">/stats</div><div class="d">Open tickets, closed tickets, average resolution time and who is carrying the desk.</div><div class="tag">admin</div></div>
+      <div class="cmds-grid reveal">
+
+        <article class="cmd-card">
+          <div class="cmd-head"><code>/setup</code><span class="tag admin">admin</span></div>
+          <p>Opens the question editor — up to five questions members answer before a ticket opens — then creates the Tickets category, the transcript channel and the panel.</p>
+          <p class="ex">No options. Reopen it to change the questions.</p>
+        </article>
+
+        <article class="cmd-card">
+          <div class="cmd-head"><code>/describe</code><span class="tag admin">admin</span></div>
+          <p>Replies with a private page served by your bot. One form: server name, what the server is, tone, hours, hard facts, escalation triggers and every saved answer.</p>
+          <p class="ex">Required once before any other command works.</p>
+        </article>
+
+        <article class="cmd-card">
+          <div class="cmd-head"><code>/edit</code><span class="tag admin">admin</span></div>
+          <p>Changes one part of the setup after the fact. Every option is optional; pass only what you want to move.</p>
+          <ul class="opts">
+            <li><code>log</code> channel — where transcripts and staff notes go</li>
+            <li><code>category</code> — where ticket channels are created</li>
+            <li><code>staff</code> role — toggles that role on or off</li>
+            <li><code>welcome</code> channel — where welcome embeds post</li>
+            <li><code>briefing</code> — reopens the description wizard</li>
+          </ul>
+          <p class="ex">/edit log:#transcripts</p>
+        </article>
+
+        <article class="cmd-card">
+          <div class="cmd-head"><code>/panel</code><span class="tag admin">admin</span></div>
+          <p>Posts the lane dropdown in the current channel and remembers where it went, so the bot can point people at it and link straight to it.</p>
+          <p class="ex">No options. Run it once in #support.</p>
+        </article>
+
+        <article class="cmd-card">
+          <div class="cmd-head"><code>/answer</code><span class="tag staff">staff</span></div>
+          <p>Teaches one question and one approved answer. Keywords are pulled from the question automatically — this is the only material the bot will state as fact.</p>
+          <p class="ex">No options. Opens a two-field form.</p>
+        </article>
+
+        <article class="cmd-card">
+          <div class="cmd-head"><code>/answers</code><span class="tag staff">staff</span></div>
+          <p>Lists every saved answer with its id, or deletes one when you pass an id. Leave the option blank to just read the list.</p>
+          <ul class="opts"><li><code>remove</code> string — id to delete</li></ul>
+          <p class="ex">/answers remove:a3</p>
+        </article>
+
+        <article class="cmd-card">
+          <div class="cmd-head"><code>/welcome</code><span class="tag admin">admin</span></div>
+          <p>Posts a bot-built welcome embed — avatar, member number, join time, your line of copy. Creates <code>#welcome</code> if it is missing.</p>
+          <ul class="opts">
+            <li><code>message</code> — the line under the greeting ({user}, {server}, {count})</li>
+            <li><code>channel</code> — post somewhere else</li>
+            <li><code>off</code> — disable welcome messages</li>
+          </ul>
+          <p class="ex">/welcome message:Hey {user}, read the rules and say hi</p>
+        </article>
+
+        <article class="cmd-card">
+          <div class="cmd-head"><code>/stats</code><span class="tag admin">admin</span></div>
+          <p>Open tickets, closed tickets, average resolution time, volume by lane, and a staff leaderboard of who is actually carrying the desk.</p>
+          <p class="ex">No options.</p>
+        </article>
+
+      </div>
+
+      <div class="buttons-note reveal">
+        <h3>Everything else is a button on the ticket</h3>
+        <div class="btnrow">
+          <span><b>Claim</b> — the bot stops answering, you own it</span>
+          <span><b>Add user</b> — pull a member in by id or mention</span>
+          <span><b>Escalate</b> — ping the staff role with the thread attached</span>
+          <span><b>Close</b> — transcript to the log, DM to the opener, channel deleted</span>
+        </div>
+      </div>
       </div>
     </div>
   </section>
