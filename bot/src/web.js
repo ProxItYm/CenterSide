@@ -57,7 +57,25 @@ function page({ guildName, token, pack, saved }) {
   button.add{margin-top:6px;padding:9px 14px;border-radius:9px;border:1px solid rgba(37,217,255,.4);
     background:rgba(37,217,255,.12);color:#d9f4ff;font-weight:600;cursor:pointer}
   .save{margin-top:30px;width:100%;padding:14px;border:0;border-radius:12px;cursor:pointer;
-    background:linear-gradient(135deg,#25d9ff,#0b9bff);color:#04121f;font-weight:700;font-size:15px}
+    background:linear-gradient(135deg,#25d9ff,#0b9bff);color:#04121f;font-weight:700;font-size:15px;
+    display:flex;align-items:center;justify-content:center;gap:10px;
+    transition:transform .12s ease,box-shadow .25s ease,background .3s ease,color .3s ease;
+    box-shadow:0 12px 30px -14px rgba(37,217,255,.8)}
+  .save:hover:not(:disabled){transform:translateY(-1px);box-shadow:0 18px 38px -16px rgba(37,217,255,.95)}
+  .save:active:not(:disabled){transform:translateY(0) scale(.995)}
+  .save:disabled{cursor:progress;opacity:.9}
+  .save.saving{background:linear-gradient(135deg,#1b3a5c,#123049);color:#bfe9ff}
+  .save.saved{background:linear-gradient(135deg,#5fffe0,#25d9ff);color:#04121f;
+    animation:pop .45s cubic-bezier(.2,1.4,.4,1)}
+  .save.failed{background:linear-gradient(135deg,#ff5f57,#ff2ee6);color:#1a0004;animation:shake .4s}
+  .spin{width:16px;height:16px;border-radius:50%;border:2px solid rgba(191,233,255,.35);
+    border-top-color:#bfe9ff;animation:spin .7s linear infinite}
+  .tick{font-size:17px;line-height:1}
+  @keyframes spin{to{transform:rotate(360deg)}}
+  @keyframes pop{0%{transform:scale(1)}45%{transform:scale(1.03)}100%{transform:scale(1)}}
+  @keyframes shake{0%,100%{transform:translateX(0)}25%{transform:translateX(-6px)}75%{transform:translateX(6px)}}
+  .banner{animation:slideIn .4s ease both}
+  @keyframes slideIn{from{opacity:0;transform:translateY(-8px)}to{opacity:1;transform:none}}
   .banner{padding:12px 14px;border-radius:10px;margin-bottom:22px;font-size:14px}
   .ok{background:rgba(95,255,224,.12);border:1px solid rgba(95,255,224,.35);color:#9ef7e6}
   .note{color:#6d82a6;font-size:12.5px;margin-top:16px}
@@ -94,7 +112,7 @@ function page({ guildName, token, pack, saved }) {
     <div id="qa-list">${answers}</div>
     <button class="add" type="button" onclick="addRow()">+ Add answer</button>
 
-    <button class="save" type="submit">Save and teach the bot</button>
+    <button class="save" id="saveBtn" type="submit"><span id="saveIcon"></span><span id="saveLabel">Save and teach the bot</span></button>
     <p class="note">This page is served by your bot on 127.0.0.1 only. The link contains a private token — do not share it.</p>
   </form>
 </main>
