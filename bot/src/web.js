@@ -69,6 +69,9 @@ function page({ guildName, token, pack, saved }) {
   ${saved ? '<div class="banner ok">Saved. You can close this tab — the bot already knows.</div>' : ''}
 
   <form method="POST" action="/g/${token}">
+    <label>Server name</label>
+    <input name="server" value="${escapeHtml(guildName)}" maxlength="80" />
+
     <label>What is this server about?</label>
     <textarea name="about" rows="4" maxlength="1200">${escapeHtml(pack.about)}</textarea>
 
@@ -175,7 +178,7 @@ async function handle(req, res) {
     } catch { answers = []; }
 
     await updatePack((pack) => {
-      pack.server = pack.server || record.settings.guildName || '';
+      pack.server = String(form.get('server') || record.settings.guildName || pack.server || '').slice(0, 80);
       pack.about = String(form.get('about') || '').slice(0, 1200);
       pack.tone = String(form.get('tone') || 'Friendly & casual').slice(0, 40);
       pack.hours = String(form.get('hours') || '').slice(0, 120);
@@ -192,6 +195,9 @@ async function handle(req, res) {
           .slice(0, 12),
       }));
     });
+
+    // Old assistant turns mention the previous server description; drop them.
+    require('./converse').clearAllHistory();
 
     res.writeHead(303, { Location: `/g/${token}?saved=1` });
     res.end();

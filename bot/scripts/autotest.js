@@ -70,7 +70,6 @@ require.cache[statePath] = {
 };
 
 const { handleTicketMessage } = require('../src/handlers');
-const { loadPack } = require('../src/knowledge');
 
 function fakeMessage({ authorId, content, staff = false, member = true, channel = 'chan-1' }) {
   const sent = [];
@@ -97,8 +96,30 @@ async function check(name, fn) {
   }
 }
 
+const pack = {
+  server: 'Test Lab',
+  about: 'A test community.',
+  tone: 'Friendly & casual',
+  hours: '9am-5pm',
+  hardFacts: '',
+  escalateWhen: 'chargeback, legal threat',
+  answers: [
+    {
+      id: 'a1',
+      question: 'How do I get my purchase role?',
+      answer: 'Roles sync automatically within a minute of checkout on the store.',
+      keywords: ['purchase', 'role', 'bought', 'buy', 'missing', 'sync', 'checkout'],
+    },
+    {
+      id: 'a3',
+      question: 'Can I get a refund?',
+      answer: 'Refunds are given for duplicate purchases within 14 days.',
+      keywords: ['refund', 'money', 'chargeback', 'cancel', 'duplicate', 'receipt'],
+    },
+  ],
+};
+
 async function main() {
-  const pack = await loadPack();
   const { autoReplyAt } = {};
   void autoReplyAt;
 

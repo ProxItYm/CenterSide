@@ -30,6 +30,11 @@ function clearHistory(channelId) {
   history.delete(channelId);
 }
 
+/** After the pack changes, old replies must not be fed back to the model. */
+function clearAllHistory() {
+  history.clear();
+}
+
 const SLOT_ORDER = {
   billing: ['product', 'order', 'tried'],
   scripts: ['error', 'platform', 'tried'],
@@ -208,5 +213,6 @@ module.exports = {
   getHistory,
   pushHistory,
   clearHistory,
+  clearAllHistory,
   summarizeFacts,
 };

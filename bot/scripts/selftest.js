@@ -10,7 +10,7 @@ const os = require('node:os');
 const path = require('node:path');
 const assert = require('node:assert');
 
-const { loadPack, buildAnswer, composeReply, findAnswer, keywordsFor, updatePack, addAnswer, removeAnswer } = require('../src/knowledge');
+const { buildAnswer, composeReply, findAnswer, keywordsFor, updatePack, addAnswer, removeAnswer } = require('../src/knowledge');
 const { JsonStore, EMPTY_STATE, guildState } = require('../src/store');
 
 let failures = 0;
@@ -25,9 +25,32 @@ function check(name, fn) {
   }
 }
 
+// Fixture pack: the suite must not depend on whatever the live bot data says.
+const pack = {
+  server: 'Test Lab',
+  about: 'A test community for scripters.',
+  tone: 'Friendly & casual',
+  hours: '9am-5pm',
+  hardFacts: 'Store is test.example',
+  escalateWhen: 'chargeback, legal threat, compromised account',
+  answers: [
+    {
+      id: 'a1',
+      question: 'How do I get my purchase role?',
+      answer: 'Roles sync automatically within a minute of checkout.',
+      keywords: ['purchase', 'role', 'bought', 'buy', 'missing', 'sync', 'checkout'],
+    },
+    {
+      id: 'a3',
+      question: 'Can I get a refund?',
+      answer: 'Refunds are given for duplicate purchases within 14 days.',
+      keywords: ['refund', 'money', 'chargeback', 'cancel', 'duplicate', 'receipt'],
+    },
+  ],
+};
+
 async function main() {
-  const pack = await loadPack();
-  console.log(`pack: ${pack.server || '(unnamed)'} · ${pack.answers.length} answers`);
+  console.log(`fixture pack: ${pack.server} · ${pack.answers.length} answers`);
 
   check('purchase role question matches a1', () => {
     const hit = findAnswer(pack, 'hey i bought the asset pack yesterday but the role never showed up');
@@ -97,17 +120,14 @@ async function main() {
     assert.strictEqual(reloaded.guilds.g1.counter, 7);
   });
 
-  // add / remove round trip against the real pack, then restore it
-  const before = JSON.parse(JSON.stringify(pack.answers));
-  await updatePack((p) => addAnswer(p, 'Do you have a test lane?', 'Yes, this entry exists only during the self-test.'));
-  await updatePack(async (p) => {
-    const added = p.answers.find((a) => a.question === 'Do you have a test lane?');
-    assert(added, 'answer was not added');
-    await removeAnswer(p, added.id);
-  });
-  await updatePack((p) => {
-    p.answers = before;
-  });
+  // add / remove round trip against an isolated object, never the live pack
+  const scratch = { ...pack, answers: [...pack.answers] };
+  addAnswer(scratch, 'Do you have a test lane?', 'Yes, this entry exists only during the self-test.');
+  const added = scratch.answers.find((a) => a.question === 'Do you have a test lane?');
+  assert(added, 'answer was not added');
+  const removed = removeAnswer(scratch, added.id);
+  assert(removed, 'answer was not removed');
+  assert(!scratch.answers.find((a) => a.id === added.id), 'answer still present after removal');
   console.log('  ok   add/remove answer round trip');
 
   if (failures) {
