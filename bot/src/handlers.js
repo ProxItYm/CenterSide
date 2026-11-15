@@ -137,7 +137,7 @@ function settingsEmbed(guild, settings) {
   const channel = (id) => (id ? `<#${id}>` : 'not set');
   return baseEmbed()
     .setTitle('CenterSide setup')
-    .setDescription('Change any of these with `/setup` — every option is optional, and nothing is recreated.')
+    .setDescription('Change any of these with `/edit` — one option at a time, nothing is recreated.')
     .addFields(
       { name: 'Ticket category', value: channel(settings.categoryId), inline: true },
       { name: 'Transcript log', value: channel(settings.logChannelId), inline: true },
@@ -146,31 +146,10 @@ function settingsEmbed(guild, settings) {
       { name: 'Welcome channel', value: settings.welcomeEnabled ? channel(settings.welcomeChannelId) : 'off', inline: true },
       { name: 'Auto-answer', value: settings.autoAnswer ? 'on' : 'off', inline: true },
     )
-    .setFooter({ text: 'Examples: /setup log:#transcripts · /setup staff:@Support · /setup briefing:true' });
+    .setFooter({ text: 'Examples: /edit log:#transcripts · /edit staff:@Support · /edit briefing:true' });
 }
 
 async function handleSetup(interaction) {
-  const record = await guildRecord(interaction.guildId);
-  const settings = record.settings;
-
-  const staffRole = interaction.options.getRole('staff');
-  const categoryOption = interaction.options.getChannel('category');
-  const logOption = interaction.options.getChannel('log');
-  const wantsBriefing = interaction.options.getBoolean('briefing');
-  const changed = Boolean(staffRole || categoryOption || logOption);
-
-  if (categoryOption) settings.categoryId = categoryOption.id;
-  if (logOption) settings.logChannelId = logOption.id;
-  if (staffRole) {
-    settings.staffRoleIds = [...new Set([...(settings.staffRoleIds || []), staffRole.id])];
-  }
-  await save();
-
-  // Options only: report the current setup, do not interrupt with the form.
-  if (changed && !wantsBriefing) {
-    return reply(interaction, '', { embeds: [settingsEmbed(interaction.guild, settings)] });
-  }
-
   const pack = await loadPack();
   const modal = new ModalBuilder().setCustomId('setup:brief').setTitle('Tell the bot about your server');
 
@@ -217,6 +196,41 @@ async function handleSetup(interaction) {
   );
 
   await interaction.showModal(modal);
+}
+
+async function handleEdit(interaction) {
+  const record = await guildRecord(interaction.guildId);
+  const settings = record.settings;
+
+  const logChannel = interaction.options.getChannel('log');
+  const categoryChannel = interaction.options.getChannel('category');
+  const staffRole = interaction.options.getRole('staff');
+  const welcomeChannel = interaction.options.getChannel('welcome');
+  const wantsBriefing = interaction.options.getBoolean('briefing');
+
+  if (!logChannel && !categoryChannel && !staffRole && !welcomeChannel && !wantsBriefing) {
+    return reply(interaction, '', { embeds: [settingsEmbed(interaction.guild, settings)] });
+  }
+
+  if (logChannel) settings.logChannelId = logChannel.id;
+  if (categoryChannel) settings.categoryId = categoryChannel.id;
+  if (welcomeChannel) {
+    settings.welcomeChannelId = welcomeChannel.id;
+    settings.welcomeEnabled = true;
+  }
+  if (staffRole) {
+    const set = new Set(settings.staffRoleIds || []);
+    if (set.has(staffRole.id)) set.delete(staffRole.id);
+    else set.add(staffRole.id);
+    settings.staffRoleIds = [...set];
+  }
+  await save();
+
+  if (wantsBriefing) {
+    return handleSetup(interaction);
+  }
+
+  return reply(interaction, '', { embeds: [settingsEmbed(interaction.guild, settings)] });
 }
 
 async function confirmSetup(interaction) {
@@ -880,6 +894,7 @@ async function route(interaction, client) {
     if (interaction.isChatInputCommand()) {
       switch (interaction.commandName) {
         case 'setup': return await handleSetup(interaction);
+        case 'edit': return await handleEdit(interaction);
         case 'panel': return await handlePanel(interaction);
         case 'answer': return await handleAnswer(interaction);
         case 'answers': return await handleAnswers(interaction);

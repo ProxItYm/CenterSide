@@ -17,22 +17,31 @@ const manage = PermissionFlagsBits.ManageGuild;
 const commands = [
   new SlashCommandBuilder()
     .setName('setup')
-    .setDescription('Set CenterSide up — briefing, channels and staff role in one go')
+    .setDescription('First-time setup: creates the channels and asks what your server is about')
+    .setDefaultMemberPermissions(manage),
+
+  new SlashCommandBuilder()
+    .setName('edit')
+    .setDescription('Change one part of the setup — log channel, category, staff role, welcome, briefing')
     .setDefaultMemberPermissions(manage)
-    .addRoleOption((option) => option
-      .setName('staff')
-      .setDescription('Role that can see and answer tickets (optional)'))
-    .addChannelOption((option) => option
-      .setName('category')
-      .setDescription('Where ticket channels go (optional — one is created if missing)')
-      .addChannelTypes(ChannelType.GuildCategory))
     .addChannelOption((option) => option
       .setName('log')
-      .setDescription('Where transcripts go (optional — one is created if missing)')
+      .setDescription('Where transcripts and staff notes go')
+      .addChannelTypes(ChannelType.GuildText))
+    .addChannelOption((option) => option
+      .setName('category')
+      .setDescription('Where ticket channels are created')
+      .addChannelTypes(ChannelType.GuildCategory))
+    .addRoleOption((option) => option
+      .setName('staff')
+      .setDescription('Role that can see and answer tickets'))
+    .addChannelOption((option) => option
+      .setName('welcome')
+      .setDescription('Where welcome embeds post')
       .addChannelTypes(ChannelType.GuildText))
     .addBooleanOption((option) => option
       .setName('briefing')
-      .setDescription('Also reopen the briefing questions')),
+      .setDescription('Reopen the briefing questions')),
 
   new SlashCommandBuilder()
     .setName('panel')
