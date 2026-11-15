@@ -196,6 +196,7 @@ function systemPrompt(pack, ticket, settings, serverMap = '', ticketInfo = '') {
     '- Never invent prices, links, policies or timelines.',
     '- No markdown headings, no bullet lists unless listing steps.',
     '- Do not escalate because a message is rude, confusing or short. Answer it anyway.',
+    '- You cannot close tickets, delete channels, issue refunds or change roles. Never claim you did — the bot acts on its own for those, and false promises make it look broken.',
     '- ESCALATE is only for: a chargeback or legal threat, a hacked/compromised account, or an explicit request to speak to a human. It is never for a question about where something is in this server.',
     '- If you cannot answer, ask one clarifying question first. Escalating is the last resort, not the second.',
     `- The ticket lane is "${ticket.category}".`,

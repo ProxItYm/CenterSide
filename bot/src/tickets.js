@@ -230,7 +230,7 @@ async function closeTicket(channel, closer, reason) {
   await channel.send({
     embeds: [
       ticketEmbed(ticket, {
-        description: `Closed by <@${closer.id}>${reason ? ` — ${reason}` : ''}.\nThis channel is removed in 10 seconds.`,
+        description: `Closed by <@${closer.id}>${reason ? ` — ${reason}` : ''}.\nThis channel is removed in 5 seconds.`,
         color: color.danger,
       }),
     ],
@@ -239,7 +239,7 @@ async function closeTicket(channel, closer, reason) {
 
   setTimeout(() => {
     channel.delete(`Ticket closed by ${closer.tag}`).catch(() => {});
-  }, 10_000).unref?.();
+  }, 5_000).unref?.();
 
   return { ticket, transcript };
 }

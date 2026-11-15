@@ -60,6 +60,19 @@ const DEFAULT_INTAKE = [
   'Please provide your USER ID',
 ];
 
+/** Does this message mean "shut my ticket" rather than "tell me something"? */
+function openerWantsClose(text) {
+  const t = String(text || '').toLowerCase().trim();
+  if (!t || t.length > 160) return false;
+
+  if (/^(done|resolved|that'?s all|thats all|no longer needed|all good|we'?re good)\b/.test(t)) return true;
+  if (/(close|shut)\s+(this|the|my|it)\b/.test(t)) return true;
+  if (/(can|could|would|will|please)\s+(you\s+)?(please\s+)?(close|shut)\b/.test(t)) return true;
+  if (/\b(close|shut)\s+(it\s+)?for\s+me\b/.test(t)) return true;
+  if (/\b(you|u)\s+can\s+(close|shut)\b/.test(t)) return true;
+  return false;
+}
+
 /** Configured questions, or the defaults, never more than five. */
 function intakeQuestions(settings) {
   const configured = (settings.intakeQuestions || [])
@@ -1121,4 +1134,4 @@ async function route(interaction, client) {
   }
 }
 
-module.exports = { route, handleTicketMessage, handleMemberJoin, ensurePanelForGuild };
+module.exports = { route, handleTicketMessage, handleMemberJoin, ensurePanelForGuild, openerWantsClose };
