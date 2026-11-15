@@ -133,6 +133,22 @@ async function ensureLogChannel(guild, settings, category, staffRoleIds) {
   return log;
 }
 
+function settingsEmbed(guild, settings) {
+  const channel = (id) => (id ? `<#${id}>` : 'not set');
+  return baseEmbed()
+    .setTitle('CenterSide setup')
+    .setDescription('Change any of these with `/setup` — every option is optional, and nothing is recreated.')
+    .addFields(
+      { name: 'Ticket category', value: channel(settings.categoryId), inline: true },
+      { name: 'Transcript log', value: channel(settings.logChannelId), inline: true },
+      { name: 'Staff role', value: (settings.staffRoleIds || []).map((id) => `<@&${id}>`).join(', ') || 'everyone with Manage Server', inline: true },
+      { name: 'Panel posted in', value: channel(settings.panelChannelId), inline: true },
+      { name: 'Welcome channel', value: settings.welcomeEnabled ? channel(settings.welcomeChannelId) : 'off', inline: true },
+      { name: 'Auto-answer', value: settings.autoAnswer ? 'on' : 'off', inline: true },
+    )
+    .setFooter({ text: 'Examples: /setup log:#transcripts · /setup staff:@Support · /setup briefing:true' });
+}
+
 async function handleSetup(interaction) {
   const record = await guildRecord(interaction.guildId);
   const settings = record.settings;
@@ -140,13 +156,20 @@ async function handleSetup(interaction) {
   const staffRole = interaction.options.getRole('staff');
   const categoryOption = interaction.options.getChannel('category');
   const logOption = interaction.options.getChannel('log');
+  const wantsBriefing = interaction.options.getBoolean('briefing');
+  const changed = Boolean(staffRole || categoryOption || logOption);
 
+  if (categoryOption) settings.categoryId = categoryOption.id;
+  if (logOption) settings.logChannelId = logOption.id;
   if (staffRole) {
     settings.staffRoleIds = [...new Set([...(settings.staffRoleIds || []), staffRole.id])];
   }
-  if (categoryOption) settings.categoryId = categoryOption.id;
-  if (logOption) settings.logChannelId = logOption.id;
   await save();
+
+  // Options only: report the current setup, do not interrupt with the form.
+  if (changed && !wantsBriefing) {
+    return reply(interaction, '', { embeds: [settingsEmbed(interaction.guild, settings)] });
+  }
 
   const pack = await loadPack();
   const modal = new ModalBuilder().setCustomId('setup:brief').setTitle('Tell the bot about your server');
@@ -239,7 +262,7 @@ async function confirmSetup(interaction) {
     )
     .setFooter({ text: 'Next: run /panel in your support channel' });
 
-  return interaction.editReply({ embeds: [embed] });
+  return interaction.editReply({ embeds: [embed, settingsEmbed(interaction.guild, settings)] });
 }
 
 /* ------------------------------------------------------------------ */

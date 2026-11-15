@@ -29,7 +29,10 @@ const commands = [
     .addChannelOption((option) => option
       .setName('log')
       .setDescription('Where transcripts go (optional — one is created if missing)')
-      .addChannelTypes(ChannelType.GuildText)),
+      .addChannelTypes(ChannelType.GuildText))
+    .addBooleanOption((option) => option
+      .setName('briefing')
+      .setDescription('Also reopen the briefing questions')),
 
   new SlashCommandBuilder()
     .setName('panel')
