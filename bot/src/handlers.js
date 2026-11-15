@@ -228,155 +228,63 @@ async function handlePanel(interaction) {
 }
 
 /* ------------------------------------------------------------------ */
-/* /ticket                                                             */
+/* /answer  /answers                                                   */
 /* ------------------------------------------------------------------ */
 
-async function handleTicket(interaction) {
-  const sub = interaction.options.getSubcommand();
-  const settings = await settingsFor(interaction.guildId);
-  const record = await guildRecord(interaction.guildId);
-  const ticket = record.tickets[interaction.channelId];
-
-  if (!ticket) return reply(interaction, 'This channel is not an open ticket.');
-
-  if (sub === 'close') {
-    const isOpener = interaction.user.id === ticket.userId;
-    if (!isOpener && !isStaff(interaction.member, settings)) {
-      return reply(interaction, 'Only the opener or staff can close this ticket.');
-    }
-    const reason = interaction.options.getString('reason');
-    await reply(interaction, 'Closing and archiving this ticket…');
-    await closeTicket(interaction.channel, interaction.user, reason);
-    return;
-  }
-
-  const denied = staffOnly(interaction.member, settings);
-  if (denied) return reply(interaction, denied);
-
-  if (sub === 'claim') {
-    const result = await claimTicket(interaction.channel, interaction.user);
-    if (result.error) return reply(interaction, result.error);
-    return reply(interaction, `You claimed ticket #${ticket.number}. The reply timer is stopped.`);
-  }
-
-  if (sub === 'add') {
-    const user = interaction.options.getUser('user', true);
-    await interaction.channel.permissionOverwrites.edit(user.id, {
-      ViewChannel: true,
-      SendMessages: true,
-      ReadMessageHistory: true,
-      AttachFiles: true,
-    });
-    return reply(interaction, `Added <@${user.id}> to the ticket.`);
-  }
-
-  if (sub === 'note') {
-    const text = interaction.options.getString('text', true);
-    ticket.notes = ticket.notes || [];
-    ticket.notes.push({ author: interaction.user.id, text, at: Date.now() });
-    await save();
-
-    if (settings.logChannelId) {
-      const logChannel = interaction.guild.channels.cache.get(settings.logChannelId)
-        || await interaction.guild.channels.fetch(settings.logChannelId).catch(() => null);
-      if (logChannel) {
-        await logChannel.send({
-          embeds: [
-            baseEmbed()
-              .setColor(color.quiet)
-              .setTitle(`Internal note · ticket #${ticket.number}`)
-              .setDescription(text)
-              .addFields({ name: 'Author', value: `<@${interaction.user.id}>`, inline: true }),
-          ],
-        }).catch(() => {});
-      }
-    }
-    await interaction.channel.send({
-      embeds: [
-        new EmbedBuilder()
-          .setColor(color.quiet)
-          .setDescription(`📝 Internal note from <@${interaction.user.id}> saved to the log and transcript.`),
-      ],
-    }).catch(() => {});
-    return reply(interaction, 'Note saved.');
-  }
-
-  return reply(interaction, 'Unknown subcommand.');
+async function handleAnswer(interaction) {
+  const modal = new ModalBuilder().setCustomId('knowledge:add').setTitle('New saved answer');
+  const question = new TextInputBuilder()
+    .setCustomId('question')
+    .setLabel('Question members ask')
+    .setStyle(TextInputStyle.Short)
+    .setPlaceholder('How do I get my purchase role?')
+    .setMaxLength(200)
+    .setRequired(true);
+  const answer = new TextInputBuilder()
+    .setCustomId('answer')
+    .setLabel('Answer the bot is allowed to give')
+    .setStyle(TextInputStyle.Paragraph)
+    .setMaxLength(900)
+    .setRequired(true);
+  modal.addComponents(
+    new ActionRowBuilder().addComponents(question),
+    new ActionRowBuilder().addComponents(answer),
+  );
+  return interaction.showModal(modal);
 }
 
-/* ------------------------------------------------------------------ */
-/* /knowledge                                                          */
-/* ------------------------------------------------------------------ */
+async function handleAnswers(interaction) {
+  const removeId = interaction.options.getString('remove');
 
-async function handleKnowledge(interaction) {
-  const sub = interaction.options.getSubcommand();
-
-  if (sub === 'add') {
-    const modal = new ModalBuilder().setCustomId('knowledge:add').setTitle('New saved answer');
-    const question = new TextInputBuilder()
-      .setCustomId('question')
-      .setLabel('Question members ask')
-      .setStyle(TextInputStyle.Short)
-      .setPlaceholder('How do I get my purchase role?')
-      .setMaxLength(200)
-      .setRequired(true);
-    const answer = new TextInputBuilder()
-      .setCustomId('answer')
-      .setLabel('Answer the bot is allowed to give')
-      .setStyle(TextInputStyle.Paragraph)
-      .setMaxLength(900)
-      .setRequired(true);
-    modal.addComponents(
-      new ActionRowBuilder().addComponents(question),
-      new ActionRowBuilder().addComponents(answer),
-    );
-    return interaction.showModal(modal);
+  if (removeId) {
+    const removed = await updatePack((pack) => removeAnswer(pack, removeId.trim()));
+    return reply(interaction, removed
+      ? `Deleted \`${removeId.trim()}\`.`
+      : `No answer with id \`${removeId.trim()}\` — run \`/answers\` with no options to see the list.`);
   }
 
   const pack = await loadPack();
+  if (!pack.answers.length) {
+    return reply(interaction, 'No saved answers yet. Add one with `/answer`.');
+  }
 
-  if (sub === 'list') {
-    if (!pack.answers.length) return reply(interaction, 'No saved answers yet. Add one with `/knowledge add`.');
-    const lines = pack.answers.map((a) => `\`${a.id}\` — **${a.question}**\n${a.answer.slice(0, 160)}`);
-    const chunks = [];
-    let current = '';
-    for (const line of lines) {
-      if ((current + line).length > 3300) {
-        chunks.push(current);
-        current = '';
-      }
-      current += `${line}\n\n`;
+  const lines = pack.answers.map((a) => `\`${a.id}\` — **${a.question}**\n${a.answer.slice(0, 160)}`);
+  const chunks = [];
+  let current = '';
+  for (const line of lines) {
+    if ((current + line).length > 3300) {
+      chunks.push(current);
+      current = '';
     }
-    if (current) chunks.push(current);
-
-    await reply(interaction, 'Saved answers:');
-    for (const chunk of chunks.slice(0, 4)) {
-      await interaction.followUp({ content: chunk.slice(0, 1900), ...EPHEMERAL });
-    }
-    return;
+    current += `${line}\n\n`;
   }
+  if (current) chunks.push(current);
 
-  if (sub === 'remove') {
-    const id = interaction.options.getString('id', true).trim();
-    const removed = await updatePack((packRef) => removeAnswer(packRef, id));
-    return reply(interaction, removed ? `Deleted \`${id}\`.` : `No answer with id \`${id}\` — check \`/knowledge list\`.`);
+  await reply(interaction, `Saved answers (${pack.answers.length}):`);
+  for (const chunk of chunks.slice(0, 4)) {
+    await interaction.followUp({ content: chunk.slice(0, 1900), ...EPHEMERAL });
   }
-
-  if (sub === 'test') {
-    const question = interaction.options.getString('question', true);
-    const settings = await settingsFor(interaction.guildId);
-    pack.__sla = slaLabel(settings.slaMinutes);
-    const result = buildAnswer(pack, question, interaction.user.username);
-    const embed = baseEmbed()
-      .setTitle('Reply preview')
-      .setDescription(result.text.slice(0, 4096))
-      .addFields(
-        { name: 'Matched', value: result.matched ? `${result.matched.id} · score ${result.confidence}` : 'nothing — would escalate', inline: true },
-      );
-    return reply(interaction, '', { embeds: [embed] });
-  }
-
-  return reply(interaction, 'Unknown subcommand.');
+  return;
 }
 
 /* ------------------------------------------------------------------ */
@@ -463,6 +371,21 @@ async function handleTicketButton(interaction) {
     return interaction.reply({ content: `Claimed by <@${interaction.user.id}>.`, allowedMentions: { parse: [] } });
   }
 
+  if (action === 'add') {
+    const denied = staffOnly(interaction.member, settings);
+    if (denied) return reply(interaction, denied);
+
+    const modal = new ModalBuilder().setCustomId('ticket:addmember').setTitle('Add someone to this ticket');
+    const input = new TextInputBuilder()
+      .setCustomId('member')
+      .setLabel('Member id or @mention')
+      .setStyle(TextInputStyle.Short)
+      .setMaxLength(100)
+      .setRequired(true);
+    modal.addComponents(new ActionRowBuilder().addComponents(input));
+    return interaction.showModal(modal);
+  }
+
   if (action === 'escalate') {
     const denied = staffOnly(interaction.member, settings);
     if (denied) return reply(interaction, denied);
@@ -496,6 +419,28 @@ async function handleTicketButton(interaction) {
 
 async function handleModal(interaction) {
   if (interaction.customId === 'setup:brief') return confirmSetup(interaction);
+
+  if (interaction.customId === 'ticket:addmember') {
+    const raw = interaction.fields.getTextInputValue('member').trim();
+    const id = raw.replace(/[^0-9]/g, '');
+
+    const record = await guildRecord(interaction.guildId);
+    const settings = record.settings;
+    const ticket = record.tickets[interaction.channelId];
+    if (!ticket) return reply(interaction, 'This channel is not an open ticket.');
+    if (!isStaff(interaction.member, settings)) return reply(interaction, staffOnly(interaction.member, settings));
+
+    if (!id) return reply(interaction, 'That does not look like a member id or mention.');
+    if (id === ticket.userId) return reply(interaction, 'The opener is already in this ticket.');
+
+    await interaction.channel.permissionOverwrites.edit(id, {
+      ViewChannel: true,
+      SendMessages: true,
+      ReadMessageHistory: true,
+      AttachFiles: true,
+    });
+    return reply(interaction, `Added <@${id}> to ticket #${ticket.number}.`);
+  }
 
   if (interaction.customId === 'knowledge:add') {
     const question = interaction.fields.getTextInputValue('question').trim();
@@ -578,8 +523,8 @@ async function route(interaction, client) {
       switch (interaction.commandName) {
         case 'setup': return await handleSetup(interaction);
         case 'panel': return await handlePanel(interaction);
-        case 'ticket': return await handleTicket(interaction);
-        case 'knowledge': return await handleKnowledge(interaction);
+        case 'answer': return await handleAnswer(interaction);
+        case 'answers': return await handleAnswers(interaction);
         case 'stats': return await handleStats(interaction);
         default: return await reply(interaction, 'Unknown command — the bot may be running an older command set. Re-run `/setup` after the commands refresh.');
       }

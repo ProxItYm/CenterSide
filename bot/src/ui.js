@@ -72,6 +72,12 @@ function ticketButtons() {
     .setEmoji('🙋')
     .setStyle(ButtonStyle.Primary);
 
+  const add = new ButtonBuilder()
+    .setCustomId('ticket:add')
+    .setLabel('Add user')
+    .setEmoji('➕')
+    .setStyle(ButtonStyle.Secondary);
+
   const escalate = new ButtonBuilder()
     .setCustomId('ticket:escalate')
     .setLabel('Escalate')
@@ -84,7 +90,7 @@ function ticketButtons() {
     .setEmoji('🔒')
     .setStyle(ButtonStyle.Danger);
 
-  return [new ActionRowBuilder().addComponents(claim, escalate, close)];
+  return [new ActionRowBuilder().addComponents(claim, add, escalate, close)];
 }
 
 function ticketEmbed(ticket, extra = {}) {

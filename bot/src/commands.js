@@ -9,8 +9,9 @@ const {
 const manage = PermissionFlagsBits.ManageGuild;
 
 /*
- * Five commands, that is the whole surface.
- * /setup does everything /config used to do, and creates the channels itself.
+ * Five flat commands, no subcommands. Discord renders each subcommand as its own
+ * picker entry, which is what makes a small bot look enormous. Everything a
+ * ticket needs lives on its buttons instead.
  */
 
 const commands = [
@@ -36,57 +37,15 @@ const commands = [
     .setDefaultMemberPermissions(manage),
 
   new SlashCommandBuilder()
-    .setName('ticket')
-    .setDescription('Manage the ticket in this channel')
-    .addSubcommand((sub) => sub
-      .setName('close')
-      .setDescription('Close, save the transcript and delete this channel')
-      .addStringOption((option) => option
-        .setName('reason')
-        .setDescription('Reason (goes in the log and the transcript)')))
-    .addSubcommand((sub) => sub
-      .setName('claim')
-      .setDescription('Take this ticket and stop the reply timer'))
-    .addSubcommand((sub) => sub
-      .setName('add')
-      .setDescription('Give another member access to this ticket')
-      .addUserOption((option) => option
-        .setName('user')
-        .setDescription('Who to add')
-        .setRequired(true)))
-    .addSubcommand((sub) => sub
-      .setName('note')
-      .setDescription('Private staff note — log and transcript only')
-      .addStringOption((option) => option
-        .setName('text')
-        .setDescription('The note')
-        .setRequired(true)
-        .setMaxLength(500))),
+    .setName('answer')
+    .setDescription('Teach it one question and one approved answer'),
 
   new SlashCommandBuilder()
-    .setName('knowledge')
-    .setDescription('The answers the bot is allowed to give')
-    .addSubcommand((sub) => sub
-      .setName('add')
-      .setDescription('Teach it one question and one approved answer'))
-    .addSubcommand((sub) => sub
-      .setName('list')
-      .setDescription('Show every saved answer with its id'))
-    .addSubcommand((sub) => sub
+    .setName('answers')
+    .setDescription('List the saved answers, or delete one by id')
+    .addStringOption((option) => option
       .setName('remove')
-      .setDescription('Delete a saved answer')
-      .addStringOption((option) => option
-        .setName('id')
-        .setDescription('Id from /knowledge list')
-        .setRequired(true)))
-    .addSubcommand((sub) => sub
-      .setName('test')
-      .setDescription('See the exact reply it would give')
-      .addStringOption((option) => option
-        .setName('question')
-        .setDescription('Question to test')
-        .setRequired(true)
-        .setMaxLength(300))),
+      .setDescription('Id of the answer to delete (leave blank to list them)')),
 
   new SlashCommandBuilder()
     .setName('stats')

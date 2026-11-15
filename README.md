@@ -105,10 +105,9 @@ To change the briefing later, run `/setup` again — it updates in place and nev
 
 ```
 /setup              four questions: what the server is, tone, hours, escalation triggers
-/knowledge add      one question + one approved answer (form)
-/knowledge list     every saved answer with its id
-/knowledge test     see the exact first reply + which entry matched
-/knowledge remove   delete an answer by id
+/answer             one question + one approved answer (form)
+/answers            every saved answer with its id
+/answers remove:<id> delete an answer by id
 ```
 
 A saved answer carries a keyword list generated from its question. Matching is deterministic: keyword
@@ -127,21 +126,29 @@ Edit `bot/data/pack.json` directly if you prefer; the site's editor exports the 
 - Pings staff when the first-reply SLA is missed.
 - Auto-closes tickets that have been silent past the configured window.
 
-Staff silence it permanently with `/ticket claim`. Nothing resumes until a new ticket opens.
+Staff silence it permanently with the **Claim** button. Nothing resumes until a new ticket opens.
 
 ## Commands
 
-Five, total.
+Five, flat, no subcommands — Discord lists subcommands as separate picker entries, which is what makes
+a small bot look enormous.
 
-| Command       | What it does                                                                 |
-| ------------- | ---------------------------------------------------------------------------- |
-| `/setup`      | Creates the category and transcript channel, saves the briefing, sets staff.  |
-| `/panel`      | Posts the ticket panel in the current channel.                                |
-| `/ticket`     | `close` · `claim` · `add` · `note`                                            |
-| `/knowledge`  | `add` · `list` · `remove` · `test`                                            |
-| `/stats`      | Open / closed counts, average resolution, staff leaderboard.                  |
+| Command    | What it does                                                                |
+| ---------- | --------------------------------------------------------------------------- |
+| `/setup`   | Creates the category and transcript channel, saves the briefing, sets staff. |
+| `/panel`   | Posts the ticket panel in the current channel.                               |
+| `/answer`  | One form: question members ask + answer the bot may give.                    |
+| `/answers` | Lists saved answers with ids; pass an id to delete it.                       |
+| `/stats`   | Open / closed counts, average resolution, staff leaderboard.                 |
 
-Everything else is a button on the ticket itself: **Claim**, **Escalate**, **Close**.
+Everything a ticket needs is a button on the ticket itself:
+
+| Button      | Effect                                                        |
+| ----------- | ------------------------------------------------------------- |
+| **Claim**   | Silences the bot for this ticket and stops the reply timer.   |
+| **Add user**| Gives another member access (modal, id or @mention).          |
+| **Escalate**| Pings the staff roles and flags the ticket.                   |
+| **Close**   | Writes the transcript, DMs the opener, deletes the channel.    |
 
 ## Data
 
