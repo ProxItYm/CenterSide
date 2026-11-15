@@ -74,19 +74,53 @@ function renderHtml(channel, ticket, messages, guildName) {
 </html>`;
 }
 
+/** Reads like a chat log, not markup. This is what staff actually open. */
+function renderText(messages, ticket, guildName) {
+  const header = [
+    `${guildName} — ticket #${ticket.number}`,
+    `Lane: ${ticket.category}`,
+    `Opened by: ${ticket.userId}`,
+    `Claimed by: ${ticket.claimedBy || '—'}`,
+    `Messages: ${messages.length}`,
+    `Exported: ${new Date().toISOString().replace('T', ' ').slice(0, 19)} UTC`,
+    ''.padEnd(52, '-'),
+  ].join('\n');
+
+  const lines = messages.map((message) => {
+    const time = new Date(message.createdTimestamp).toISOString().slice(11, 16);
+    const who = message.author.bot ? `${message.author.username} (bot)` : message.author.username;
+    const body = (message.cleanContent || message.content || '').replace(/\n/g, '\n    ');
+    const files = [...message.attachments.values()].map((a) => `[file] ${a.name}`).join(' ');
+    return `${time}  ${who}: ${body || files ? body : '[no text]'}${files ? ` ${files}` : ''}`;
+  });
+
+  return `${header}\n${lines.join('\n')}\n`;
+}
+
 /**
- * Fetches the channel, renders an HTML transcript, and writes it to disk.
- * Returns { buffer, filename, count }. Caller decides where it goes.
+ * Fetches the channel, writes a readable .txt transcript, and keeps an HTML copy
+ * on disk for anything that wants to render it later.
+ * Returns { text, textName, html, htmlName, count }.
  */
 async function createTranscript(channel, ticket, guildName) {
   const messages = await fetchAll(channel);
+  const text = renderText(messages, ticket, guildName);
   const html = renderHtml(channel, ticket, messages, guildName);
-  const filename = `ticket-${ticket.number}-${Date.now()}.html`;
+  const stamp = Date.now();
+  const textName = `ticket-${ticket.number}-${stamp}.txt`;
+  const htmlName = `ticket-${ticket.number}-${stamp}.html`;
 
   await fs.mkdir(transcriptDir, { recursive: true });
-  await fs.writeFile(path.join(transcriptDir, filename), html, 'utf8').catch(() => {});
+  await fs.writeFile(path.join(transcriptDir, textName), text, 'utf8').catch(() => {});
+  await fs.writeFile(path.join(transcriptDir, htmlName), html, 'utf8').catch(() => {});
 
-  return { buffer: Buffer.from(html, 'utf8'), filename, count: messages.length };
+  return {
+    text: Buffer.from(text, 'utf8'),
+    textName,
+    html: Buffer.from(html, 'utf8'),
+    htmlName,
+    count: messages.length,
+  };
 }
 
 module.exports = { createTranscript, fetchAll };

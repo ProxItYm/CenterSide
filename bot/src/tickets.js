@@ -154,7 +154,7 @@ async function closeTicket(channel, closer, reason) {
 
   const transcript = await createTranscript(channel, ticket, channel.guild.name).catch(() => null);
   const file = transcript
-    ? new AttachmentBuilder(transcript.buffer, { name: transcript.filename })
+    ? new AttachmentBuilder(transcript.text, { name: transcript.textName })
     : null;
 
   ticket.status = 'closed';
@@ -181,22 +181,35 @@ async function closeTicket(channel, closer, reason) {
     const logChannel = channel.guild.channels.cache.get(logChannelId)
       || await channel.guild.channels.fetch(logChannelId).catch(() => null);
     if (logChannel) {
+      const mins = Math.max(1, Math.round((Date.now() - ticket.createdAt) / 60000));
+      const intake = Array.isArray(ticket.intake)
+        ? ticket.intake.map((entry) => `**${entry.question}** ${entry.answer || '—'}`).join('\n').slice(0, 900)
+        : ticket.intake
+          ? Object.entries(ticket.intake).map(([k, v]) => `**${k}** ${v}`).join('\n')
+          : '—';
+
       const embed = baseEmbed()
         .setColor(color.ok)
-        .setTitle(`Ticket #${ticket.number} closed`)
-        .addFields(
-          { name: 'Opener', value: `<@${ticket.userId}>`, inline: true },
-          { name: 'Closed by', value: `<@${closer.id}>`, inline: true },
-          { name: 'Claimed by', value: ticket.claimedBy ? `<@${ticket.claimedBy}>` : '—', inline: true },
-          { name: 'Lane', value: String(ticket.category), inline: true },
-          { name: 'Reason', value: reason || '—', inline: true },
-        );
-      if (ticket.notes.length) {
+        .setTitle(`#${ticket.number} · ${String(ticket.category)} closed`)
+        .setDescription([
+          `**Opened by** <@${ticket.userId}>`,
+          `**Closed by** <@${closer.id}>`,
+          ticket.claimedBy ? `**Claimed by** <@${ticket.claimedBy}>` : '',
+          `**Time open** ${mins} min`,
+          reason ? `**Reason** ${reason}` : '',
+          '',
+          '**What they asked**',
+          intake,
+        ].filter(Boolean).join('\n'))
+        .setFooter({ text: `${transcript ? transcript.count : 0} messages · transcript attached` });
+
+      if (ticket.notes && ticket.notes.length) {
         embed.addFields({
-          name: 'Internal notes',
+          name: 'Staff notes',
           value: ticket.notes.map((n) => `• <@${n.author}>: ${n.text}`).join('\n').slice(0, 1024),
         });
       }
+
       await logChannel.send({ embeds: [embed], files: file ? [file] : [] }).catch(() => {});
     }
   }
@@ -210,7 +223,7 @@ async function closeTicket(channel, closer, reason) {
           .setTitle(`Ticket #${ticket.number} closed`)
           .setDescription(`Thanks for reaching out. Here is a copy of the conversation.\n${reason ? `Reason: ${reason}` : ''}`),
       ],
-      files: [new AttachmentBuilder(transcript.buffer, { name: transcript.filename })],
+      files: [new AttachmentBuilder(transcript.text, { name: transcript.textName })],
     }).catch(() => {});
   }
 

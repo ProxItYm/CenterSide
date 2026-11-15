@@ -912,6 +912,15 @@ async function handleTicketMessage(message, pack) {
   }
   console.log(`[auto-answer] #${ticket.number} received ${text.length} chars`);
 
+  // The opener can close their own ticket by simply asking.
+  if (isOpener && /^(?:please\s+)?(?:close|close\s+(?:this|the)?\s*ticket|close\s+this|done|that'?s\s+all|resolved|you\s+can\s+close(?:\s+it)?|no\s+longer\s+needed)\b/i.test(text)) {
+    console.log(`[ticket] #${ticket.number} opener asked to close`);
+    autoReplyAt.set(message.channelId, Date.now());
+    await safeReply(message, 'Closing this ticket and saving the transcript. Thanks for the detail — reopen any time.');
+    await closeTicket(message.channel, message.author, 'Closed at the opener\'s request');
+    return;
+  }
+
   const thanks = /\b(thanks|thank you|ty|that worked|it worked|fixed|solved|sorted|got it|all good)\b/i.test(text);
   if (thanks && ticket.autoAnswered) {
     autoReplyAt.set(message.channelId, Date.now());

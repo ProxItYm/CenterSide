@@ -201,7 +201,7 @@ database and no external service.
 
 ## Notes
 
-- Transcripts are capped at 1,000 messages per ticket.
+- Transcripts are plain text (.txt) capped at 1,000 messages, posted to the log channel and DMed to the opener. The log entry is a short summary — opener, closer, time open, and what they asked — not the raw file.
 - The bot never deletes a ticket without writing the transcript first; if the log channel is
   unreachable it still DMs the file to the opener.
 - `Message Content` is required. Without it the auto-answer silently does nothing.
