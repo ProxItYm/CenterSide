@@ -71,25 +71,44 @@ npm run deploy
 npm start
 ```
 
-## First five minutes in your server
+## Setup, in one command
 
-1. Create a category called **Tickets** and a channel called **#transcripts** (private, staff only).
-2. `/config category` → the Tickets category.
-3. `/config log` → #transcripts.
-4. `/config staff` → add the role that should see tickets (repeat for each role).
-5. `/panel` in #support.
+In your server, run:
+
+```
+/setup
+```
+
+That is it. It creates a **Tickets** category, creates a private **#transcripts** channel locked to your
+staff role, saves your server briefing, and replies with a summary of exactly what it made. The modal
+asks four plain questions: what the server is about, tone, support hours, and what should hand off to a
+human.
+
+Optional arguments if you already have your own channels:
+
+```
+/setup staff:@Support category:#Tickets log:#transcripts
+```
+
+Then post the panel wherever members should ask:
+
+```
+/panel
+```
 
 Members pick a lane from the dropdown and a private channel opens, visible only to them, the staff
-roles and the bot.
+role and the bot.
+
+To change the briefing later, run `/setup` again — it updates in place and never duplicates channels.
 
 ## Teaching it about your server
 
 ```
-/knowledge setup     five-field briefing: what the server is, tone, hours, hard facts, escalation triggers
-/knowledge add       one question + one approved answer (opens a form)
-/knowledge list      every saved answer with its id
-/knowledge test      ask a question privately and see the exact first reply + which entry matched
-/knowledge export    download the pack as JSON
+/setup              four questions: what the server is, tone, hours, escalation triggers
+/knowledge add      one question + one approved answer (form)
+/knowledge list     every saved answer with its id
+/knowledge test     see the exact first reply + which entry matched
+/knowledge remove   delete an answer by id
 ```
 
 A saved answer carries a keyword list generated from its question. Matching is deterministic: keyword
@@ -112,18 +131,17 @@ Staff silence it permanently with `/ticket claim`. Nothing resumes until a new t
 
 ## Commands
 
-| Command              | What it does                                               |
-| -------------------- | ---------------------------------------------------------- |
-| `/panel`             | Post the ticket panel                                      |
-| `/ticket claim`      | Take the ticket, stop the SLA clock                        |
-| `/ticket close`      | Transcript to the log + DM to the opener, then delete      |
-| `/ticket add/remove` | Give or remove a member's access                           |
-| `/ticket note`       | Internal note — log and transcript only, never shown       |
-| `/ticket escalate`   | Ping staff roles and flag the ticket                       |
-| `/ticket rename`     | Rename the channel                                         |
-| `/knowledge …`       | Setup, add, list, remove, test, export                     |
-| `/config …`          | Category, log, staff roles, auto-answer, SLA, auto-close   |
-| `/stats`             | Open/closed counts, average resolution, staff leaderboard  |
+Five, total.
+
+| Command       | What it does                                                                 |
+| ------------- | ---------------------------------------------------------------------------- |
+| `/setup`      | Creates the category and transcript channel, saves the briefing, sets staff.  |
+| `/panel`      | Posts the ticket panel in the current channel.                                |
+| `/ticket`     | `close` · `claim` · `add` · `note`                                            |
+| `/knowledge`  | `add` · `list` · `remove` · `test`                                            |
+| `/stats`      | Open / closed counts, average resolution, staff leaderboard.                  |
+
+Everything else is a button on the ticket itself: **Claim**, **Escalate**, **Close**.
 
 ## Data
 

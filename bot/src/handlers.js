@@ -2,8 +2,9 @@
 
 const {
   MessageFlags,
+  ChannelType,
+  PermissionFlagsBits,
   EmbedBuilder,
-  AttachmentBuilder,
   ActionRowBuilder,
   ButtonBuilder,
   ButtonStyle,
@@ -18,7 +19,6 @@ const {
   openTicket,
   claimTicket,
   closeTicket,
-  touchTicket,
   isStaff,
   slaLabel,
 } = require('./tickets');
@@ -36,7 +36,7 @@ const EPHEMERAL = { flags: MessageFlags.Ephemeral };
 
 function staffOnly(member, settings) {
   if (isStaff(member, settings)) return null;
-  return 'Staff only — you need the configured staff role or Manage Server.';
+  return 'Staff only — you need the staff role set in `/setup`, or Manage Server.';
 }
 
 async function reply(interaction, content, extra = {}) {
@@ -47,14 +47,189 @@ async function reply(interaction, content, extra = {}) {
 }
 
 /* ------------------------------------------------------------------ */
-/* slash commands                                                      */
+/* /setup                                                              */
+/* ------------------------------------------------------------------ */
+
+async function ensureCategory(guild, settings) {
+  let category = settings.categoryId ? guild.channels.cache.get(settings.categoryId) : null;
+  if (!category) {
+    category = guild.channels.cache.find(
+      (c) => c.type === ChannelType.GuildCategory && c.name.toLowerCase() === 'tickets',
+    );
+  }
+  if (!category) {
+    category = await guild.channels.create({
+      name: 'Tickets',
+      type: ChannelType.GuildCategory,
+      reason: 'CenterSide setup',
+    });
+  }
+  settings.categoryId = category.id;
+  return category;
+}
+
+async function ensureLogChannel(guild, settings, category, staffRoleIds) {
+  let log = settings.logChannelId ? guild.channels.cache.get(settings.logChannelId) : null;
+  if (!log) {
+    log = guild.channels.cache.find(
+      (c) => c.type === ChannelType.GuildText && c.name === 'transcripts',
+    );
+  }
+  if (!log) {
+    log = await guild.channels.create({
+      name: 'transcripts',
+      type: ChannelType.GuildText,
+      parent: category.id,
+      topic: 'CenterSide transcripts and staff notes',
+      permissionOverwrites: [
+        { id: guild.roles.everyone.id, deny: [PermissionFlagsBits.ViewChannel] },
+        {
+          id: guild.client.user.id,
+          allow: [
+            PermissionFlagsBits.ViewChannel,
+            PermissionFlagsBits.SendMessages,
+            PermissionFlagsBits.EmbedLinks,
+            PermissionFlagsBits.AttachFiles,
+          ],
+        },
+        ...staffRoleIds.map((roleId) => ({
+          id: roleId,
+          allow: [
+            PermissionFlagsBits.ViewChannel,
+            PermissionFlagsBits.SendMessages,
+            PermissionFlagsBits.ReadMessageHistory,
+            PermissionFlagsBits.AttachFiles,
+          ],
+        })),
+      ],
+      reason: 'CenterSide setup',
+    });
+  }
+  settings.logChannelId = log.id;
+  return log;
+}
+
+async function handleSetup(interaction) {
+  const record = await guildRecord(interaction.guildId);
+  const settings = record.settings;
+
+  const staffRole = interaction.options.getRole('staff');
+  const categoryOption = interaction.options.getChannel('category');
+  const logOption = interaction.options.getChannel('log');
+
+  if (staffRole) {
+    settings.staffRoleIds = [...new Set([...(settings.staffRoleIds || []), staffRole.id])];
+  }
+  if (categoryOption) settings.categoryId = categoryOption.id;
+  if (logOption) settings.logChannelId = logOption.id;
+  await save();
+
+  const pack = await loadPack();
+  const modal = new ModalBuilder().setCustomId('setup:brief').setTitle('Tell the bot about your server');
+
+  const about = new TextInputBuilder()
+    .setCustomId('about')
+    .setLabel('What is this server about?')
+    .setStyle(TextInputStyle.Paragraph)
+    .setPlaceholder('A Roblox development community. We sell asset packs and run weekly build jams.')
+    .setMaxLength(700)
+    .setRequired(true)
+    .setValue(pack.about || '');
+
+  const tone = new TextInputBuilder()
+    .setCustomId('tone')
+    .setLabel('Tone: Friendly & casual / Professional / Short & blunt / Playful')
+    .setStyle(TextInputStyle.Short)
+    .setMaxLength(40)
+    .setRequired(false)
+    .setValue(pack.tone || 'Friendly & casual');
+
+  const hours = new TextInputBuilder()
+    .setCustomId('hours')
+    .setLabel('Support hours')
+    .setStyle(TextInputStyle.Short)
+    .setMaxLength(70)
+    .setRequired(false)
+    .setValue(pack.hours || '');
+
+  const escalate = new TextInputBuilder()
+    .setCustomId('escalate')
+    .setLabel('Hand it to a human when someone mentions…')
+    .setStyle(TextInputStyle.Short)
+    .setPlaceholder('chargeback, legal threat, hacked account')
+    .setMaxLength(300)
+    .setRequired(false)
+    .setValue(pack.escalateWhen || '');
+
+  modal.addComponents(
+    new ActionRowBuilder().addComponents(about),
+    new ActionRowBuilder().addComponents(tone),
+    new ActionRowBuilder().addComponents(hours),
+    new ActionRowBuilder().addComponents(escalate),
+  );
+
+  await interaction.showModal(modal);
+}
+
+async function confirmSetup(interaction) {
+  await interaction.deferReply({ flags: MessageFlags.Ephemeral });
+
+  const about = interaction.fields.getTextInputValue('about').trim();
+  const tone = interaction.fields.getTextInputValue('tone').trim() || 'Friendly & casual';
+  const hours = interaction.fields.getTextInputValue('hours').trim();
+  const escalate = interaction.fields.getTextInputValue('escalate').trim();
+
+  await updatePack((pack) => {
+    pack.server = pack.server || interaction.guild.name;
+    pack.about = about;
+    pack.tone = tone;
+    pack.hours = hours;
+    pack.escalateWhen = escalate;
+  });
+
+  const record = await guildRecord(interaction.guildId);
+  const settings = record.settings;
+
+  const category = await ensureCategory(interaction.guild, settings);
+  await ensureLogChannel(interaction.guild, settings, category, settings.staffRoleIds || []);
+  await save();
+
+  const pack = await loadPack();
+
+  const embed = baseEmbed()
+    .setColor(color.ok)
+    .setTitle('CenterSide is set up')
+    .setDescription('Everything below was created or saved automatically. Nothing else to configure.')
+    .addFields(
+      { name: 'Tickets', value: settings.categoryId ? `<#${settings.categoryId}>` : 'not set', inline: true },
+      { name: 'Transcripts', value: settings.logChannelId ? `<#${settings.logChannelId}>` : 'not set', inline: true },
+      { name: 'Staff role', value: (settings.staffRoleIds || []).map((id) => `<@&${id}>`).join(', ') || 'everyone with Manage Server', inline: true },
+      { name: 'Tone', value: tone, inline: true },
+      { name: 'Hours', value: hours || 'not set', inline: true },
+      { name: 'Briefing', value: `${pack.about.length} characters saved`, inline: true },
+    )
+    .setFooter({ text: 'Next: run /panel in your support channel' });
+
+  return interaction.editReply({ embeds: [embed] });
+}
+
+/* ------------------------------------------------------------------ */
+/* /panel                                                              */
 /* ------------------------------------------------------------------ */
 
 async function handlePanel(interaction) {
-  const channel = interaction.options.getChannel('channel') || interaction.channel;
-  await channel.send(panelMessage());
-  await reply(interaction, `Panel posted in <#${channel.id}>. Members can open tickets from there.`);
+  const settings = await settingsFor(interaction.guildId);
+  if (!settings.categoryId) {
+    return reply(interaction, 'Run `/setup` first — it creates the ticket category and transcript channel for you.');
+  }
+
+  await interaction.channel.send(panelMessage());
+  return reply(interaction, 'Panel posted. Members pick a lane and get a private channel.');
 }
+
+/* ------------------------------------------------------------------ */
+/* /ticket                                                             */
+/* ------------------------------------------------------------------ */
 
 async function handleTicket(interaction) {
   const sub = interaction.options.getSubcommand();
@@ -62,9 +237,7 @@ async function handleTicket(interaction) {
   const record = await guildRecord(interaction.guildId);
   const ticket = record.tickets[interaction.channelId];
 
-  if (!ticket) {
-    return reply(interaction, 'This channel is not an open CenterSide ticket.');
-  }
+  if (!ticket) return reply(interaction, 'This channel is not an open ticket.');
 
   if (sub === 'close') {
     const isOpener = interaction.user.id === ticket.userId;
@@ -73,7 +246,8 @@ async function handleTicket(interaction) {
     }
     const reason = interaction.options.getString('reason');
     await reply(interaction, 'Closing and archiving this ticket…');
-    return closeTicket(interaction.channel, interaction.user, reason);
+    await closeTicket(interaction.channel, interaction.user, reason);
+    return;
   }
 
   const denied = staffOnly(interaction.member, settings);
@@ -82,7 +256,7 @@ async function handleTicket(interaction) {
   if (sub === 'claim') {
     const result = await claimTicket(interaction.channel, interaction.user);
     if (result.error) return reply(interaction, result.error);
-    return reply(interaction, `You claimed ticket #${ticket.number}. The SLA clock is stopped.`);
+    return reply(interaction, `You claimed ticket #${ticket.number}. The reply timer is stopped.`);
   }
 
   if (sub === 'add') {
@@ -96,23 +270,15 @@ async function handleTicket(interaction) {
     return reply(interaction, `Added <@${user.id}> to the ticket.`);
   }
 
-  if (sub === 'remove') {
-    const user = interaction.options.getUser('user', true);
-    if (user.id === ticket.userId) return reply(interaction, 'The opener cannot be removed from their own ticket.');
-    await interaction.channel.permissionOverwrites.delete(user.id).catch(() => {});
-    return reply(interaction, `Removed <@${user.id}> from the ticket.`);
-  }
-
   if (sub === 'note') {
     const text = interaction.options.getString('text', true);
     ticket.notes = ticket.notes || [];
     ticket.notes.push({ author: interaction.user.id, text, at: Date.now() });
     await save();
 
-    const logChannelId = settings.logChannelId;
-    if (logChannelId) {
-      const logChannel = interaction.guild.channels.cache.get(logChannelId)
-        || await interaction.guild.channels.fetch(logChannelId).catch(() => null);
+    if (settings.logChannelId) {
+      const logChannel = interaction.guild.channels.cache.get(settings.logChannelId)
+        || await interaction.guild.channels.fetch(settings.logChannelId).catch(() => null);
       if (logChannel) {
         await logChannel.send({
           embeds: [
@@ -129,97 +295,21 @@ async function handleTicket(interaction) {
       embeds: [
         new EmbedBuilder()
           .setColor(color.quiet)
-          .setDescription(`📝 Internal note from <@${interaction.user.id}> recorded in the log.`),
+          .setDescription(`📝 Internal note from <@${interaction.user.id}> saved to the log and transcript.`),
       ],
     }).catch(() => {});
-    return reply(interaction, 'Note saved. It is in the log and the transcript, not visible as text here.');
-  }
-
-  if (sub === 'escalate') {
-    const reason = interaction.options.getString('reason') || 'No reason given';
-    ticket.escalated = true;
-    await save();
-    const mention = (settings.staffRoleIds || []).map((id) => `<@&${id}>`).join(' ');
-    await interaction.channel.send({
-      content: mention || undefined,
-      embeds: [
-        baseEmbed()
-          .setColor(color.danger)
-          .setTitle(`Ticket #${ticket.number} escalated`)
-          .setDescription(`${reason}\n\nEscalated by <@${interaction.user.id}>.`)
-          .addFields({ name: 'Opener', value: `<@${ticket.userId}>`, inline: true }),
-      ],
-    });
-    return reply(interaction, 'Escalated.');
-  }
-
-  if (sub === 'rename') {
-    const name = interaction.options.getString('name', true);
-    await interaction.channel.setName(name.toLowerCase().replace(/[^a-z0-9-]/g, '-').slice(0, 90));
-    return reply(interaction, 'Renamed.');
+    return reply(interaction, 'Note saved.');
   }
 
   return reply(interaction, 'Unknown subcommand.');
 }
 
+/* ------------------------------------------------------------------ */
+/* /knowledge                                                          */
+/* ------------------------------------------------------------------ */
+
 async function handleKnowledge(interaction) {
   const sub = interaction.options.getSubcommand();
-
-  if (sub === 'setup') {
-    const pack = await loadPack();
-    const modal = new ModalBuilder()
-      .setCustomId('knowledge:setup')
-      .setTitle('Server briefing');
-
-    const about = new TextInputBuilder()
-      .setCustomId('about')
-      .setLabel('What is this server about?')
-      .setStyle(TextInputStyle.Paragraph)
-      .setMaxLength(700)
-      .setRequired(true)
-      .setValue(pack.about || '');
-
-    const tone = new TextInputBuilder()
-      .setCustomId('tone')
-      .setLabel('Tone (Friendly & casual / Professional / Short & blunt / Playful)')
-      .setStyle(TextInputStyle.Short)
-      .setMaxLength(40)
-      .setRequired(true)
-      .setValue(pack.tone || 'Friendly & casual');
-
-    const hours = new TextInputBuilder()
-      .setCustomId('hours')
-      .setLabel('Support hours')
-      .setStyle(TextInputStyle.Short)
-      .setMaxLength(70)
-      .setRequired(false)
-      .setValue(pack.hours || '');
-
-    const facts = new TextInputBuilder()
-      .setCustomId('facts')
-      .setLabel('Hard facts it must never get wrong')
-      .setStyle(TextInputStyle.Paragraph)
-      .setMaxLength(500)
-      .setRequired(false)
-      .setValue(pack.hardFacts || '');
-
-    const escalate = new TextInputBuilder()
-      .setCustomId('escalate')
-      .setLabel('Escalate to a human when…')
-      .setStyle(TextInputStyle.Paragraph)
-      .setMaxLength(500)
-      .setRequired(false)
-      .setValue(pack.escalateWhen || '');
-
-    modal.addComponents(
-      new ActionRowBuilder().addComponents(about),
-      new ActionRowBuilder().addComponents(tone),
-      new ActionRowBuilder().addComponents(hours),
-      new ActionRowBuilder().addComponents(facts),
-      new ActionRowBuilder().addComponents(escalate),
-    );
-    return interaction.showModal(modal);
-  }
 
   if (sub === 'add') {
     const modal = new ModalBuilder().setCustomId('knowledge:add').setTitle('New saved answer');
@@ -227,11 +317,12 @@ async function handleKnowledge(interaction) {
       .setCustomId('question')
       .setLabel('Question members ask')
       .setStyle(TextInputStyle.Short)
+      .setPlaceholder('How do I get my purchase role?')
       .setMaxLength(200)
       .setRequired(true);
     const answer = new TextInputBuilder()
       .setCustomId('answer')
-      .setLabel('Answer the bot should give')
+      .setLabel('Answer the bot is allowed to give')
       .setStyle(TextInputStyle.Paragraph)
       .setMaxLength(900)
       .setRequired(true);
@@ -250,7 +341,7 @@ async function handleKnowledge(interaction) {
     const chunks = [];
     let current = '';
     for (const line of lines) {
-      if ((current + line).length > 3500) {
+      if ((current + line).length > 3300) {
         chunks.push(current);
         current = '';
       }
@@ -268,7 +359,7 @@ async function handleKnowledge(interaction) {
   if (sub === 'remove') {
     const id = interaction.options.getString('id', true).trim();
     const removed = await updatePack((packRef) => removeAnswer(packRef, id));
-    return reply(interaction, removed ? `Deleted answer \`${id}\`.` : `No answer with id \`${id}\`. Check \`/knowledge list\`.`);
+    return reply(interaction, removed ? `Deleted \`${id}\`.` : `No answer with id \`${id}\` — check \`/knowledge list\`.`);
   }
 
   if (sub === 'test') {
@@ -280,75 +371,28 @@ async function handleKnowledge(interaction) {
       .setTitle('Reply preview')
       .setDescription(result.text.slice(0, 4096))
       .addFields(
-        { name: 'Matched', value: result.matched ? `${result.matched.id} · score ${result.confidence}` : 'none', inline: true },
-        { name: 'Escalates', value: result.escalate ? `yes${result.escalateReason ? ` (${result.escalateReason})` : ''}` : 'no', inline: true },
+        { name: 'Matched', value: result.matched ? `${result.matched.id} · score ${result.confidence}` : 'nothing — would escalate', inline: true },
       );
     return reply(interaction, '', { embeds: [embed] });
   }
 
-  if (sub === 'export') {
-    const file = new AttachmentBuilder(Buffer.from(JSON.stringify(pack, null, 2), 'utf8'), { name: 'centerside-pack.json' });
-    return reply(interaction, `Pack: ${pack.answers.length} answers.`, { files: [file] });
-  }
+  return reply(interaction, 'Unknown subcommand.');
 }
 
-async function handleConfig(interaction) {
-  const sub = interaction.options.getSubcommand();
-  const record = await guildRecord(interaction.guildId);
-  const settings = record.settings;
-
-  if (sub === 'view') {
-    const embed = baseEmbed()
-      .setTitle('CenterSide settings')
-      .addFields(
-        { name: 'Ticket category', value: settings.categoryId ? `<#${settings.categoryId}>` : 'not set', inline: true },
-        { name: 'Log channel', value: settings.logChannelId ? `<#${settings.logChannelId}>` : 'not set', inline: true },
-        { name: 'Auto-answer', value: settings.autoAnswer ? 'on' : 'off', inline: true },
-        { name: 'Staff roles', value: (settings.staffRoleIds || []).map((id) => `<@&${id}>`).join(', ') || 'none', inline: true },
-        { name: 'First-reply SLA', value: settings.slaMinutes ? slaLabel(settings.slaMinutes) : 'off', inline: true },
-        { name: 'Auto-close', value: settings.autoCloseHours ? `${settings.autoCloseHours}h` : 'off', inline: true },
-      );
-    return reply(interaction, '', { embeds: [embed] });
-  }
-
-  if (sub === 'category') {
-    settings.categoryId = interaction.options.getChannel('category', true).id;
-  } else if (sub === 'log') {
-    settings.logChannelId = interaction.options.getChannel('channel', true).id;
-  } else if (sub === 'staff') {
-    const action = interaction.options.getString('action', true);
-    const role = interaction.options.getRole('role', true);
-    const set = new Set(settings.staffRoleIds || []);
-    if (action === 'add') set.add(role.id);
-    else set.delete(role.id);
-    settings.staffRoleIds = [...set];
-  } else if (sub === 'autoanswer') {
-    settings.autoAnswer = interaction.options.getBoolean('enabled', true);
-  } else if (sub === 'sla') {
-    settings.slaMinutes = interaction.options.getInteger('minutes', true);
-  } else if (sub === 'autoclose') {
-    settings.autoCloseHours = interaction.options.getInteger('hours', true);
-  }
-
-  await save();
-  return reply(interaction, 'Saved.');
-}
+/* ------------------------------------------------------------------ */
+/* /stats                                                              */
+/* ------------------------------------------------------------------ */
 
 async function handleStats(interaction) {
   const record = await guildRecord(interaction.guildId);
   const history = record.history || [];
   const open = Object.values(record.tickets || {});
-  const closed = history.length;
 
-  const closeTimes = history
-    .filter((t) => t.closedAt && t.openedAt)
-    .map((t) => t.closedAt - t.openedAt);
+  const closeTimes = history.filter((t) => t.closedAt && t.openedAt).map((t) => t.closedAt - t.openedAt);
   const avgMs = closeTimes.length ? closeTimes.reduce((a, b) => a + b, 0) / closeTimes.length : 0;
 
   const byCategory = new Map();
-  for (const ticket of history) {
-    byCategory.set(ticket.category, (byCategory.get(ticket.category) || 0) + 1);
-  }
+  for (const ticket of history) byCategory.set(ticket.category, (byCategory.get(ticket.category) || 0) + 1);
 
   const byStaff = new Map();
   for (const ticket of history) {
@@ -361,16 +405,12 @@ async function handleStats(interaction) {
     .map(([id, count]) => `<@${id}> — ${count}`)
     .join('\n') || 'no claims yet';
 
-  const avgLabel = avgMs
-    ? `${(avgMs / 3_600_000).toFixed(1)}h`
-    : '—';
-
   const embed = baseEmbed()
     .setTitle('CenterSide stats')
     .addFields(
       { name: 'Open now', value: String(open.length), inline: true },
-      { name: 'Closed all time', value: String(closed), inline: true },
-      { name: 'Avg. resolution', value: avgLabel, inline: true },
+      { name: 'Closed all time', value: String(history.length), inline: true },
+      { name: 'Avg. resolution', value: avgMs ? `${(avgMs / 3_600_000).toFixed(1)}h` : '—', inline: true },
       { name: 'By lane', value: [...byCategory.entries()].map(([k, v]) => `${k}: ${v}`).join('\n') || '—' },
       { name: 'Staff leaderboard', value: leaderboard },
     );
@@ -385,7 +425,7 @@ async function handleStats(interaction) {
 async function handlePanelSelect(interaction) {
   const category = interaction.values[0];
   if (!panelCategories.some((c) => c.value === category)) {
-    return reply(interaction, 'That category is no longer available.');
+    return reply(interaction, 'That lane is no longer available.');
   }
 
   const pack = await loadPack();
@@ -455,36 +495,13 @@ async function handleTicketButton(interaction) {
 }
 
 async function handleModal(interaction) {
-  if (interaction.customId === 'knowledge:setup') {
-    const about = interaction.fields.getTextInputValue('about').trim();
-    const tone = interaction.fields.getTextInputValue('tone').trim() || 'Friendly & casual';
-    const hours = interaction.fields.getTextInputValue('hours').trim();
-    const facts = interaction.fields.getTextInputValue('facts').trim();
-    const escalate = interaction.fields.getTextInputValue('escalate').trim();
-
-    await updatePack((pack) => {
-      pack.server = pack.server || interaction.guild.name;
-      pack.about = about;
-      pack.tone = tone;
-      pack.hours = hours;
-      pack.hardFacts = facts;
-      pack.escalateWhen = escalate;
-    });
-
-    await reply(
-      interaction,
-      `Briefing saved for **${interaction.guild.name}**. Tone: ${tone}. ` +
-      `${hours ? `Hours: ${hours}. ` : ''}Add the questions members ask with \`/knowledge add\`, then test with \`/knowledge test\`.`,
-    );
-    return;
-  }
+  if (interaction.customId === 'setup:brief') return confirmSetup(interaction);
 
   if (interaction.customId === 'knowledge:add') {
     const question = interaction.fields.getTextInputValue('question').trim();
     const answer = interaction.fields.getTextInputValue('answer').trim();
     const id = await updatePack((pack) => addAnswer(pack, question, answer));
-    await reply(interaction, `Saved as \`${id}\`. Test it with \`/knowledge test question:${question}\`.`);
-    return;
+    return reply(interaction, `Saved as \`${id}\`. Test it with \`/knowledge test\`.`);
   }
 
   return reply(interaction, 'Unknown form.');
@@ -499,17 +516,13 @@ async function handleTicketMessage(message, pack) {
 
   const record = await guildRecord(message.guildId);
   const ticket = record.tickets[message.channelId];
-
-  // Only touch channels that are actual tickets.
   if (!ticket || ticket.status === 'closed') return;
 
   const settings = record.settings;
   ticket.lastActivity = Date.now();
   await save();
 
-  const authorIsStaff = isStaff(message.member, settings);
-  if (authorIsStaff) {
-    // A human replying satisfies the SLA for good.
+  if (isStaff(message.member, settings)) {
     ticket.slaSatisfied = true;
     await save();
     return;
@@ -562,13 +575,14 @@ async function handleTicketMessage(message, pack) {
 async function route(interaction, client) {
   try {
     if (interaction.isChatInputCommand()) {
-      const { commandName } = interaction;
-      if (commandName === 'panel') return await handlePanel(interaction);
-      if (commandName === 'ticket') return await handleTicket(interaction);
-      if (commandName === 'knowledge') return await handleKnowledge(interaction);
-      if (commandName === 'config') return await handleConfig(interaction);
-      if (commandName === 'stats') return await handleStats(interaction);
-      return await reply(interaction, 'Unknown command.');
+      switch (interaction.commandName) {
+        case 'setup': return await handleSetup(interaction);
+        case 'panel': return await handlePanel(interaction);
+        case 'ticket': return await handleTicket(interaction);
+        case 'knowledge': return await handleKnowledge(interaction);
+        case 'stats': return await handleStats(interaction);
+        default: return await reply(interaction, 'Unknown command — the bot may be running an older command set. Re-run `/setup` after the commands refresh.');
+      }
     }
 
     if (interaction.isStringSelectMenu() && interaction.customId === 'panel:open') {

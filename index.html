@@ -651,9 +651,9 @@
         </article>
 
         <article class="feat wide mag reveal">
-          <div class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3a4 4 0 0 0-4 4v1a3 3 0 0 0 0 6v1a4 4 0 0 0 8 0v-1a3 3 0 0 0 0-6V7a4 4 0 0 0-4-4Z"/><path d="M12 8v8"/></svg></div>
-          <h3>It learns from the close, not just the prompt</h3>
-          <p>When staff edits a draft before sending, CenterSide stores the correction as a suggestion in your review queue. Approve it in one click and the pack gets sharper — no retraining, no CSV exports, no prompt engineering degree.</p>
+          <div class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M13 2 4 14h6l-1 8 9-12h-6z"/></svg></div>
+          <h3>Set up with one command</h3>
+          <p>Run <code>/setup</code> and it builds the Tickets category, creates a private #transcripts channel locked to your staff role, and asks four plain questions about your server. No settings maze, no channel IDs to paste — the bot provisions what it needs and tells you what it did.</p>
         </article>
 
         <article class="feat reveal">
@@ -832,13 +832,13 @@
         </div>
         <div class="step reveal">
           <div class="num">02</div>
-          <h3>Write the briefing</h3>
-          <p>Run <code>/knowledge setup</code> and answer six prompts: what the server is, who you are, what you sell, hours, policies, escalation triggers.</p>
+          <h3>One command</h3>
+          <p>Run <code>/setup</code>. It creates the Tickets category, makes a private #transcripts channel, and asks four plain questions about your server.</p>
         </div>
         <div class="step reveal">
           <div class="num">03</div>
           <h3>Post the panel</h3>
-          <p>Run <code>/panel create</code> in #support. Members open tickets, CenterSide answers, staff handle only the escalations. That's the desk.</p>
+          <p>Run <code>/panel</code> in #support. Members pick a lane, get a private channel, and CenterSide answers. That's the desk.</p>
         </div>
       </div>
     </div>
@@ -849,23 +849,16 @@
     <div class="wrap">
       <div class="sec-head reveal">
         <div class="kicker">Command reference</div>
-        <h2>Fast to learn, quiet in the channel.</h2>
-        <p>Slash commands only — no prefix clutter, no public message spam. Staff-only commands are hidden from members automatically.</p>
+        <h2>Five commands. That is the whole bot.</h2>
+        <p>No config maze, no fifteen options to wire up. One setup command provisions the channels for you, and the rest are the four things a desk actually does.</p>
       </div>
 
       <div class="cmd-table reveal">
-        <div class="cmd-row"><div class="c">/panel create</div><div class="d">Post a support panel with dropdown lanes or buttons in the current channel.</div><div class="tag">admin</div></div>
-        <div class="cmd-row"><div class="c">/knowledge setup</div><div class="d">Guided wizard that builds the server pack. Six prompts, live preview, saves on the last step.</div><div class="tag">admin</div></div>
-        <div class="cmd-row"><div class="c">/knowledge add</div><div class="d">Append a Q&amp;A pair, a policy, or a hard fact to the active pack.</div><div class="tag">admin</div></div>
-        <div class="cmd-row"><div class="c">/knowledge test</div><div class="d">Ask a question privately and see the reply the bot would give, plus which pack entry it used.</div><div class="tag">staff</div></div>
-        <div class="cmd-row"><div class="c">/knowledge review</div><div class="d">The queue of staff edits saved as suggested answers — approve or discard in one click.</div><div class="tag">staff</div></div>
-        <div class="cmd-row"><div class="c">/ticket claim</div><div class="d">Assign the ticket to you, stop the SLA clock, and post a quiet internal note.</div><div class="tag">staff</div></div>
-        <div class="cmd-row"><div class="c">/ticket note</div><div class="d">Add an internal note the member cannot see. Included in the transcript.</div><div class="tag">staff</div></div>
-        <div class="cmd-row"><div class="c">/ticket escalate</div><div class="d">Ping the lane's role, bump priority, and attach a summary of the conversation so far.</div><div class="tag">staff</div></div>
-        <div class="cmd-row"><div class="c">/ticket close</div><div class="d">Close with an optional reason, write the transcript, DM the opener a copy.</div><div class="tag">staff</div></div>
-        <div class="cmd-row"><div class="c">/ticket add</div><div class="d">Pull another member or a role into the ticket with read/write access.</div><div class="tag">staff</div></div>
-        <div class="cmd-row"><div class="c">/stats</div><div class="d">Volume, first-response time, resolution time, reopen rate and staff leaderboard.</div><div class="tag">admin</div></div>
-        <div class="cmd-row"><div class="c">/config</div><div class="d">Log channel, transcript format, auto-close, quiet hours, and per-lane SLA overrides.</div><div class="tag">admin</div></div>
+        <div class="cmd-row"><div class="c">/setup</div><div class="d">The whole setup. Creates the Tickets category and a private #transcripts channel, saves your server briefing, sets the staff role. Options: <code>staff</code>, <code>category</code>, <code>log</code> — all optional.</div><div class="tag">admin</div></div>
+        <div class="cmd-row"><div class="c">/panel</div><div class="d">Posts the lane dropdown in the current channel. That is the only thing members ever see.</div><div class="tag">admin</div></div>
+        <div class="cmd-row"><div class="c">/ticket</div><div class="d">Four subcommands: <code>close</code>, <code>claim</code>, <code>add</code>, <code>note</code>. Everything else lives on the ticket's buttons.</div><div class="tag">staff</div></div>
+        <div class="cmd-row"><div class="c">/knowledge</div><div class="d">Four subcommands: <code>add</code>, <code>list</code>, <code>remove</code>, <code>test</code>. This is what the bot is allowed to say.</div><div class="tag">staff</div></div>
+        <div class="cmd-row"><div class="c">/stats</div><div class="d">Open tickets, closed tickets, average resolution time and who is carrying the desk.</div><div class="tag">admin</div></div>
       </div>
     </div>
   </section>
@@ -906,7 +899,7 @@
             <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg> HTML &amp; TXT transcripts</li>
             <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg> SLA timers &amp; escalation lanes</li>
             <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg> Claim, transfer &amp; internal notes</li>
-            <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg> Staff edit review queue</li>
+            <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg> One-command setup &amp; auto-created channels</li>
             <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg> Unlimited analytics history &amp; CSV export</li>
             <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg> Multiple servers with shared packs</li>
             <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg> Cross-server ticket handoff</li>
