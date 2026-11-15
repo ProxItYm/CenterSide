@@ -10,6 +10,7 @@ const { loadPack } = require('./knowledge');
 const { setClient, autoCloseStale } = require('./tickets');
 const ai = require('./ai');
 const serverInfo = require('./serverinfo');
+const web = require('./web');
 
 if (!config.token) {
   console.error('DISCORD_TOKEN is missing. Copy .env.example to .env and fill it in.');
@@ -32,6 +33,8 @@ function wire(client, flags) {
     if (!flags.members) {
       console.warn('[centerside] Server Members intent is OFF — welcome messages are disabled. Enable it in the same panel to turn them on.');
     }
+
+    web.start();
 
     for (const guild of ready.guilds.cache.values()) {
       try {

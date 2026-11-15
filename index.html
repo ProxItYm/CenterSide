@@ -855,12 +855,14 @@
     <div class="wrap">
       <div class="sec-head reveal">
         <div class="kicker">Command reference</div>
-        <h2>Five commands. That is the whole bot.</h2>
+        <h2>Six commands, plus one page.</h2>
         <p>No config maze, no fifteen options to wire up. One setup command provisions the channels for you, and the rest are the four things a desk actually does.</p>
       </div>
 
       <div class="cmd-table reveal">
         <div class="cmd-row"><div class="c">/setup</div><div class="d">The whole setup. Creates the Tickets category and a private #transcripts channel, saves your server briefing, sets the staff role. Options: <code>staff</code>, <code>category</code>, <code>log</code> — all optional.</div><div class="tag">admin</div></div>
+        <div class="cmd-row"><div class="c">/describe</div><div class="d">Replies with a private page — served by your bot — where you write the whole briefing and manage every saved answer in one form.</div><div class="tag">admin</div></div>
+        <div class="cmd-row"><div class="c">/edit</div><div class="d">Change one thing after setup: log channel, ticket category, staff role, welcome channel, or reopen the briefing.</div><div class="tag">admin</div></div>
         <div class="cmd-row"><div class="c">/panel</div><div class="d">Posts the lane dropdown in the current channel. That is the only thing members ever see.</div><div class="tag">admin</div></div>
         <div class="cmd-row"><div class="c">/answer</div><div class="d">Opens one form: the question members ask, and the answer the bot is allowed to give.</div><div class="tag">staff</div></div>
         <div class="cmd-row"><div class="c">/answers</div><div class="d">Lists every saved answer with its id. Pass an id to delete it.</div><div class="tag">staff</div></div>

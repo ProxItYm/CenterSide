@@ -37,6 +37,7 @@ const {
 } = require('./converse');
 const ai = require('./ai');
 const serverInfo = require('./serverinfo');
+const web = require('./web');
 const { guildRecord, settingsFor, save } = require('./state');
 
 const autoReplyAt = new Map();
@@ -292,6 +293,7 @@ async function confirmSetup(interaction) {
 async function ensurePanelForGuild(guild) {
   const record = await guildRecord(guild.id);
   const settings = record.settings;
+  settings.guildName = guild.name;
 
   if (settings.panelChannelId && settings.panelMessageId) {
     const existingChannel = guild.channels.cache.get(settings.panelChannelId);
@@ -337,6 +339,36 @@ async function ensurePanelForGuild(guild) {
   settings.panelMessageId = message.id;
   await save();
   return { channel, message };
+}
+
+async function handleDescribe(interaction) {
+  const record = await guildRecord(interaction.guildId);
+  record.settings.guildName = interaction.guild.name;
+  const token = web.tokenFor(record.settings);
+  await save();
+
+  web.start();
+  const url = web.urlFor(token);
+
+  const row = new ActionRowBuilder().addComponents(
+    new ButtonBuilder()
+      .setLabel('Open the setup page')
+      .setEmoji('📝')
+      .setStyle(ButtonStyle.Link)
+      .setURL(url),
+  );
+
+  const existing = await loadPack();
+
+  return reply(interaction, [
+    '**Write the full description here:**',
+    url,
+    '',
+    'The page asks what the server is, tone, hours, hard facts, escalation triggers, and every saved answer — all in one form. Saving it writes straight into the bot, so the next reply uses it.',
+    `Current pack: ${existing.answers.length} saved answer${existing.answers.length === 1 ? '' : 's'}, ${existing.about ? `${existing.about.length} characters of description` : 'no description yet'}.`,
+    '',
+    'The link only works on the machine running the bot (127.0.0.1) and contains a private token — treat it like a password.',
+  ].join('\n'), { components: [row] });
 }
 
 async function handlePanel(interaction) {
@@ -895,6 +927,7 @@ async function route(interaction, client) {
       switch (interaction.commandName) {
         case 'setup': return await handleSetup(interaction);
         case 'edit': return await handleEdit(interaction);
+        case 'describe': return await handleDescribe(interaction);
         case 'panel': return await handlePanel(interaction);
         case 'answer': return await handleAnswer(interaction);
         case 'answers': return await handleAnswers(interaction);

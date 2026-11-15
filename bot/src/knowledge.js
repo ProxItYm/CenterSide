@@ -53,7 +53,13 @@ function firstSentence(text, limit = 200) {
 }
 
 function normalize(pack) {
-  const safe = { ...EMPTY_PACK, ...(pack || {}) };
+  // Mutate the store's cached object in place. Spreading it into a new object
+  // (the old behaviour) silently dropped every scalar write — answers worked
+  // because the array reference survived, while `about`, `tone` and `hours` did not.
+  const safe = pack || {};
+  for (const [key, value] of Object.entries(EMPTY_PACK)) {
+    if (safe[key] === undefined) safe[key] = structuredClone(value);
+  }
   safe.answers = Array.isArray(safe.answers) ? safe.answers : [];
   safe.answers.forEach((answer, index) => {
     if (!answer.id) answer.id = `a${index + 1}`;

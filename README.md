@@ -136,6 +136,8 @@ a small bot look enormous.
 | Command    | What it does                                                                |
 | ---------- | --------------------------------------------------------------------------- |
 | `/setup`   | Creates the category and transcript channel, saves the briefing, sets staff. |
+| `/edit`     | Change log channel, category, staff role, welcome channel, or the briefing.  |
+| `/describe` | Hands you a private local web page to describe the server and edit answers.  |
 | `/panel`   | Posts the ticket panel in the current channel.                               |
 | `/answer`  | One form: question members ask + answer the bot may give.                    |
 | `/answers` | Lists saved answers with ids; pass an id to delete it.                       |
@@ -165,6 +167,14 @@ You never touch an embed builder. `{server}`, `{count}` and `{user}` get substit
 
 Requires the **Server Members** intent (Developer Portal → Bot → Privileged Gateway Intents). Without
 it the bot still runs; it logs that welcome is off and keeps the desk going.
+
+## The setup page
+
+`/describe` replies with a link to `http://127.0.0.1:8788/g/<token>` — a page the bot serves itself.
+It asks everything in one form: what the server is, tone, hours, hard facts, escalation triggers, and
+every saved answer (add/remove rows). Saving writes straight into `data/pack.json`, so the next ticket
+reply uses it. The link carries a per-guild token and is bound to loopback; set `WEB_BASE` if you put a
+tunnel in front of it.
 
 ## Data
 
