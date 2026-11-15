@@ -29,6 +29,7 @@ module.exports = {
     categoryId: null,
     logChannelId: null,
     panelChannelId: null,
+    panelMessageId: null,
     staffRoleIds: [],
     autoAnswer: true,
     autoCloseHours: 24,

@@ -5,7 +5,7 @@ require('dotenv').config();
 const { Client, GatewayIntentBits, Partials, Events } = require('discord.js');
 
 const config = require('./config');
-const { route, handleTicketMessage, handleMemberJoin } = require('./handlers');
+const { route, handleTicketMessage, handleMemberJoin, ensurePanelForGuild } = require('./handlers');
 const { loadPack } = require('./knowledge');
 const { setClient, autoCloseStale } = require('./tickets');
 const ai = require('./ai');
@@ -31,6 +31,15 @@ function wire(client, flags) {
     }
     if (!flags.members) {
       console.warn('[centerside] Server Members intent is OFF — welcome messages are disabled. Enable it in the same panel to turn them on.');
+    }
+
+    for (const guild of ready.guilds.cache.values()) {
+      try {
+        const { channel } = await ensurePanelForGuild(guild);
+        console.log(`[centerside] panel ready in #${channel.name} (${guild.name})`);
+      } catch (err) {
+        console.error(`[panel] ${guild.name}: ${err.message}`);
+      }
     }
 
     const engine = await ai.describeProvider().catch(() => null);

@@ -203,6 +203,10 @@ async function confirmSetup(interaction) {
   await ensureLogChannel(interaction.guild, settings, category, settings.staffRoleIds || []);
   await save();
 
+  await ensurePanelForGuild(interaction.guild).catch((err) => {
+    console.error('[setup] panel creation failed:', err.message);
+  });
+
   const pack = await loadPack();
 
   const embed = baseEmbed()
@@ -226,16 +230,73 @@ async function confirmSetup(interaction) {
 /* /panel                                                              */
 /* ------------------------------------------------------------------ */
 
+
+/**
+ * Guarantees a panel exists and is remembered. Finds an existing support channel,
+ * creates one if needed, posts the dropdown, stores channel + message id. Runs on
+ * /setup, /panel, and on every boot so a deleted panel heals itself.
+ */
+async function ensurePanelForGuild(guild) {
+  const record = await guildRecord(guild.id);
+  const settings = record.settings;
+
+  if (settings.panelChannelId && settings.panelMessageId) {
+    const existingChannel = guild.channels.cache.get(settings.panelChannelId);
+    if (existingChannel) {
+      const existing = await existingChannel.messages.fetch(settings.panelMessageId).catch(() => null);
+      if (existing) return { channel: existingChannel, message: existing };
+    }
+  }
+
+  let channel = settings.panelChannelId ? guild.channels.cache.get(settings.panelChannelId) : null;
+  if (!channel) {
+    // Match on the word, not the whole name — servers decorate channels as
+    // "#🎫│tickets" and an exact regex silently misses the obvious room.
+    const candidates = [...guild.channels.cache.values()].filter(
+      (c) => c.type === ChannelType.GuildText && /ticket|support|help/i.test(c.name),
+    );
+    candidates.sort((a, b) => {
+      const score = (name) => (/ticket/i.test(name) ? 0 : /support/i.test(name) ? 1 : 2);
+      return score(a.name) - score(b.name);
+    });
+    channel = candidates[0] || null;
+  }
+  if (!channel) {
+    channel = await guild.channels.create({
+      name: 'support',
+      type: ChannelType.GuildText,
+      topic: 'Open a ticket from the panel below',
+      reason: 'CenterSide panel',
+    });
+  }
+
+  // Moving the panel: remove the old one so members never see two.
+  if (settings.panelChannelId && settings.panelMessageId && settings.panelChannelId !== channel.id) {
+    const previousChannel = guild.channels.cache.get(settings.panelChannelId);
+    if (previousChannel) {
+      const previous = await previousChannel.messages.fetch(settings.panelMessageId).catch(() => null);
+      if (previous) await previous.delete().catch(() => {});
+    }
+  }
+
+  const message = await channel.send(panelMessage());
+  settings.panelChannelId = channel.id;
+  settings.panelMessageId = message.id;
+  await save();
+  return { channel, message };
+}
+
 async function handlePanel(interaction) {
   const settings = await settingsFor(interaction.guildId);
   if (!settings.categoryId) {
     return reply(interaction, 'Run `/setup` first — it creates the ticket category and transcript channel for you.');
   }
 
-  await interaction.channel.send(panelMessage());
+  const panelMessageSent = await interaction.channel.send(panelMessage());
 
   const record = await guildRecord(interaction.guildId);
   record.settings.panelChannelId = interaction.channelId;
+  record.settings.panelMessageId = panelMessageSent.id;
   await save();
 
   return reply(interaction, 'Panel posted. Members pick a lane and get a private channel.');
@@ -599,6 +660,26 @@ async function handleTicketMessage(message, pack) {
   pushHistory(message.channelId, 'user', text);
   autoReplyAt.set(message.channelId, Date.now());
 
+  // "Where is the panel" is a fact, not a writing task. Answer it from config so
+  // the model cannot name a channel it merely saw in the map.
+  const panelQuestion = /(where.{0,25}(panel|ticket)|how (do|can|would) (i|you) (open|make|create|start)|open a ticket|ticket panel|tickets channel)/i.test(text);
+  if (panelQuestion) {
+    const built = await ensurePanelForGuild(message.guild).catch(() => null);
+    const link = built ? `https://discord.com/channels/${message.guild.id}/${built.channel.id}/${built.message.id}` : null;
+
+    const answer = built
+      ? `Tickets open from the panel in <#${built.channel.id}> — [jump straight to it](${link}). Click the dropdown on that message and pick the lane that fits: ${panelCategories.map((c) => `**${c.label}**`).join(', ')}.`
+      : "There is no panel in this server yet — a staff member needs to run `/panel` once and it will appear.";
+
+    ticket.autoAnswered = true;
+    await save();
+    pushHistory(message.channelId, 'assistant', answer);
+    autoReplyAt.set(message.channelId, Date.now());
+    console.log(`[auto-answer] #${ticket.number} panel question answered directly`);
+    await message.reply({ content: answer, allowedMentions: { parse: [] } }).catch(() => {});
+    return;
+  }
+
   // Hard triggers and an explicit request for a person never reach the model.
   const trigger = shouldEscalate(pack, text);
   // "can I report a staff member" is a report, not a hand-off request.
@@ -621,6 +702,9 @@ async function handleTicketMessage(message, pack) {
     const panelChannel = settings.panelChannelId
       ? message.guild.channels.cache.get(settings.panelChannelId)
       : null;
+    const panelLink = panelChannel && settings.panelMessageId
+      ? `https://discord.com/channels/${message.guild.id}/${panelChannel.id}/${settings.panelMessageId}`
+      : null;
     const ticketCategory = settings.categoryId
       ? message.guild.channels.cache.get(settings.categoryId)
       : null;
@@ -630,9 +714,11 @@ async function handleTicketMessage(message, pack) {
 
     const ticketInfo = [
       panelChannel
-        ? `The ticket panel — the message where members pick a lane — is posted in #${panelChannel.name}.`
+        ? `The ticket panel — the message where members pick a lane — is posted in #${panelChannel.name} and has NOTHING to do with slash commands. The panel channel name is exactly "${panelChannel.name}" — if you mention it, use that name and that link, not any other channel.`
         : 'No ticket panel has been posted yet; staff need to run /panel in the support channel.',
-      'Members open a ticket by picking a lane from that panel dropdown. They do not run slash commands; only staff use commands.',
+      panelLink ? `Direct link to the panel: ${panelLink}` : '',
+      `Members open a ticket by clicking the dropdown on that panel and picking a lane. The lanes are: ${panelCategories.map((c) => c.label).join(', ')}. Members never run slash commands; only staff do.`,
+      'If someone asks how to open a ticket, do not tell them to ask staff — tell them the panel channel and give them the link, or say the panel is being set up if it truly does not exist.',
       ticketCategory ? `New tickets are created under the "${ticketCategory.name}" category.` : '',
       `This conversation is happening in #${message.channel.name}.`,
       logChannel ? `Transcripts are archived in #${logChannel.name}.` : '',
@@ -757,4 +843,4 @@ async function route(interaction, client) {
   }
 }
 
-module.exports = { route, handleTicketMessage, handleMemberJoin };
+module.exports = { route, handleTicketMessage, handleMemberJoin, ensurePanelForGuild };

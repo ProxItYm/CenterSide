@@ -45,9 +45,11 @@ class JsonStore {
   }
 
   save() {
-    const snapshot = JSON.stringify(this.cache, null, 2);
     const tmp = `${this.file}.${process.pid}.tmp`;
     this.queue = this.queue.then(async () => {
+      // Serialise here, not at call time: two guilds saving in the same tick used
+      // to snapshot before the second mutation and silently drop it.
+      const snapshot = JSON.stringify(this.cache, null, 2);
       await fs.mkdir(path.dirname(this.file), { recursive: true });
       await fs.writeFile(tmp, snapshot, 'utf8');
       await fs.rename(tmp, this.file);
