@@ -61,10 +61,7 @@ function ticketIntro(ticket, pack, openerId) {
         pack.hours ? `**Support hours:** ${pack.hours}` : '',
       ].filter(Boolean).join('\n'),
     )
-    .addFields(
-      { name: 'Status', value: 'Open', inline: true },
-      { name: 'First reply target', value: '15 min', inline: true },
-    );
+    .addFields({ name: 'Status', value: 'Open', inline: true });
 
   return embed;
 }

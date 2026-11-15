@@ -89,7 +89,7 @@ async function main() {
     const state = await store.load();
     const guild = guildState(state, 'g1');
     assert.deepStrictEqual(guild.tickets, {});
-    assert.strictEqual(guild.settings.slaMinutes, 15);
+    assert.strictEqual(guild.settings.autoAnswer, true);
     guild.counter = 7;
     await store.save();
     const again = new JsonStore(file, EMPTY_STATE);

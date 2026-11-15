@@ -12,20 +12,10 @@ const { guildRecord, save } = require('./state');
 const { createTranscript } = require('./transcript');
 const { baseEmbed, ticketIntro, ticketButtons, ticketEmbed } = require('./ui');
 
-const slaTimers = new Map();
-
 function isStaff(member, settings) {
   if (!member) return false;
   if (member.permissions.has(PermissionFlagsBits.ManageGuild)) return true;
   return (settings.staffRoleIds || []).some((roleId) => member.roles.cache.has(roleId));
-}
-
-function slaLabel(minutes) {
-  if (minutes >= 60) {
-    const hours = minutes / 60;
-    return `${Number.isInteger(hours) ? hours : hours.toFixed(1)} hour${hours === 1 ? '' : 's'}`;
-  }
-  return `${minutes} minute${minutes === 1 ? '' : 's'}`;
 }
 
 /** Creates the private channel and records the ticket. */
@@ -104,7 +94,6 @@ async function openTicket({ guild, member, category, pack }) {
     claimedBy: null,
     createdAt: Date.now(),
     lastActivity: Date.now(),
-    slaDeadline: Date.now() + settings.slaMinutes * 60_000,
     escalated: false,
     notes: [],
   };
@@ -118,41 +107,7 @@ async function openTicket({ guild, member, category, pack }) {
   });
   await intro.pin().catch(() => {});
 
-  armSla(channel, ticket, settings);
   return { ticket, channel };
-}
-
-function armSla(channel, ticket, settings) {
-  clearSla(ticket.id);
-  const delay = Math.max(0, ticket.slaDeadline - Date.now()) + 1000;
-  if (!settings.slaMinutes || settings.slaMinutes <= 0) return;
-
-  const timer = setTimeout(async () => {
-    slaTimers.delete(ticket.id);
-    const record = await guildRecord(channel.guild.id);
-    const current = record.tickets[channel.id];
-    if (!current || current.status !== 'open' || current.claimedBy) return;
-
-    const mention = (record.settings.staffRoleIds || []).map((id) => `<@&${id}>`).join(' ');
-    channel.send({
-      content: mention || undefined,
-      embeds: [
-        new EmbedBuilder()
-          .setColor(color.warn)
-          .setTitle('First reply SLA missed')
-          .setDescription(`Ticket #${ticket.number} has been open for ${slaLabel(record.settings.slaMinutes)} with no staff reply.`),
-      ],
-    }).catch(() => {});
-  }, delay);
-
-  timer.unref?.();
-  slaTimers.set(ticket.id, timer);
-}
-
-function clearSla(ticketId) {
-  const timer = slaTimers.get(ticketId);
-  if (timer) clearTimeout(timer);
-  slaTimers.delete(ticketId);
 }
 
 async function touchTicket(channelId, patch = {}) {
@@ -187,7 +142,6 @@ async function claimTicket(channel, member) {
 
   ticket.claimedBy = member.id;
   ticket.status = 'claimed';
-  clearSla(channel.id);
   await save();
   return { ticket };
 }
@@ -207,7 +161,6 @@ async function closeTicket(channel, closer, reason) {
   ticket.closedAt = Date.now();
   ticket.closedBy = closer.id;
   ticket.closeReason = reason || null;
-  clearSla(channel.id);
 
   record.history.push({
     number: ticket.number,
@@ -297,19 +250,6 @@ async function autoCloseStale(client) {
   }
 }
 
-/** Re-arms SLA timers after a restart and refreshes cached tickets. */
-async function restoreTimers(client) {
-  for (const guild of client.guilds.cache.values()) {
-    const record = await guildRecord(guild.id);
-    for (const ticket of Object.values(record.tickets)) {
-      if (ticket.status === 'closed' || ticket.claimedBy) continue;
-      const channel = await globalClientChannel(ticket.id);
-      if (!channel) continue;
-      armSla(channel, ticket, record.settings);
-    }
-  }
-}
-
 module.exports = {
   openTicket,
   claimTicket,
@@ -317,9 +257,5 @@ module.exports = {
   touchTicket,
   isStaff,
   autoCloseStale,
-  restoreTimers,
   setClient,
-  clearSla,
-  armSla,
-  slaLabel,
 };

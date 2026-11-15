@@ -124,7 +124,6 @@ Edit `bot/data/pack.json` directly if you prefer; the site's editor exports the 
 - One auto-reply per channel per 20 seconds, so a stuck loop cannot spam.
 - Escalates on missing answers and on pack-defined triggers (chargeback, legal threat, compromised
   account…) — those also ping the staff roles.
-- Pings staff when the first-reply SLA is missed.
 - Auto-closes tickets that have been silent past the configured window.
 
 Staff silence it permanently with the **Claim** button. Nothing resumes until a new ticket opens.
@@ -147,7 +146,7 @@ Everything a ticket needs is a button on the ticket itself:
 
 | Button      | Effect                                                        |
 | ----------- | ------------------------------------------------------------- |
-| **Claim**   | Silences the bot for this ticket and stops the reply timer.   |
+| **Claim**   | Silences the bot for this ticket.                              |
 | **Add user**| Gives another member access (modal, id or @mention).          |
 | **Escalate**| Pings the staff roles and flags the ticket.                   |
 | **Close**   | Writes the transcript, DMs the opener, deletes the channel.    |

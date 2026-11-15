@@ -25,7 +25,6 @@ function makeTicket(id, number) {
     claimedBy: null,
     createdAt: Date.now(),
     lastActivity: Date.now(),
-    slaDeadline: Date.now() + 900000,
     escalated: false,
     notes: [],
   };
@@ -39,7 +38,6 @@ const record = {
     panelChannelId: null,
     staffRoleIds: ['staff-role'],
     autoAnswer: true,
-    slaMinutes: 15,
     autoCloseHours: 24,
     welcomeEnabled: false,
     welcomeChannelId: null,
@@ -163,11 +161,10 @@ async function main() {
     record.tickets['chan-4'].claimedBy = null;
   });
 
-  await check('non-opener staff message meets SLA and stays silent', async () => {
+  await check('non-opener staff message stays silent', async () => {
     const message = fakeMessage({ authorId: 'staff-id', content: 'on it', staff: true, channel: 'chan-5' });
     await handleTicketMessage(message, pack);
     assert.strictEqual(message.sent.length, 0, 'bot spoke over staff');
-    assert.strictEqual(record.tickets['chan-5'].slaSatisfied, true, 'SLA not marked satisfied');
   });
 
   await check('a bare "Hi" gets a spoken reply', async () => {

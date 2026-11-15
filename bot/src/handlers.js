@@ -20,7 +20,6 @@ const {
   claimTicket,
   closeTicket,
   isStaff,
-  slaLabel,
 } = require('./tickets');
 const {
   loadPack,
@@ -549,10 +548,9 @@ async function handleTicketMessage(message, pack) {
 
   const isOpener = message.author.id === ticket.userId;
 
-  // Staff replying is the SLA being met. The opener is allowed to be staff too —
-  // owners test their own desk — so opener messages still get an answer.
+  // Staff replying means no answer from me. The opener can be staff too (owners
+  // test their own desk), so opener messages still get an answer.
   if (isStaff(message.member, settings) && !isOpener) {
-    ticket.slaSatisfied = true;
     pushHistory(message.channelId, 'assistant', `(staff ${message.author.username} replied)`);
     await save();
     return;

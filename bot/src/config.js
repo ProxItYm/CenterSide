@@ -31,7 +31,6 @@ module.exports = {
     panelChannelId: null,
     staffRoleIds: [],
     autoAnswer: true,
-    slaMinutes: 15,
     autoCloseHours: 24,
     welcomeEnabled: false,
     welcomeChannelId: null,

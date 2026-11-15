@@ -7,7 +7,7 @@ const { Client, GatewayIntentBits, Partials, Events } = require('discord.js');
 const config = require('./config');
 const { route, handleTicketMessage, handleMemberJoin } = require('./handlers');
 const { loadPack } = require('./knowledge');
-const { setClient, restoreTimers, autoCloseStale } = require('./tickets');
+const { setClient, autoCloseStale } = require('./tickets');
 const ai = require('./ai');
 
 if (!config.token) {
@@ -35,7 +35,6 @@ function wire(client, flags) {
     const engine = await ai.describeProvider().catch(() => null);
     console.log(`[centerside] reply engine: ${engine || 'built-in conversational agent'}`);
 
-    await restoreTimers(client).catch((err) => console.error('[ready] timer restore failed:', err.message));
 
     const sweep = setInterval(() => {
       autoCloseStale(client).catch((err) => console.error('[auto-close]', err.message));
