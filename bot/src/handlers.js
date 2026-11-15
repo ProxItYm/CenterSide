@@ -216,11 +216,107 @@ async function promptDescribe(interaction, prefix) {
   web.start();
 
   const url = web.urlFor(token);
-  const row = new ActionRowBuilder().addComponents(
-    new ButtonBuilder().setLabel('Open the setup page').setEmoji('📝').setStyle(ButtonStyle.Link).setURL(url),
+  const publicUrl = Boolean(process.env.WEB_BASE);
+
+  const buttons = [];
+  if (publicUrl) {
+    buttons.push(new ButtonBuilder()
+      .setLabel('Open the setup page')
+      .setEmoji('📝')
+      .setStyle(ButtonStyle.Link)
+      .setURL(url));
+  }
+  buttons.push(new ButtonBuilder()
+    .setCustomId('describe:form')
+    .setLabel('Fill it in here')
+    .setEmoji('✍️')
+    .setStyle(ButtonStyle.Primary));
+
+  const row = new ActionRowBuilder().addComponents(buttons);
+
+  return reply(interaction, [
+    prefix,
+    '',
+    '**Describe your server first.** The bot needs to know what this place is before it can answer tickets.',
+    publicUrl ? `Page: ${url}` : 'Use the button below — a short form, saved straight into the bot.',
+    '',
+    'What it is, tone, support hours, and hard facts it must never get wrong. Saved answers can be added afterwards with `/answer`.',
+  ].join('\n'), { components: [row] });
+}
+
+/** In-Discord briefing: works for every server, no tunnel required. */
+async function describeModal(interaction) {
+  const pack = await loadPack();
+  const modal = new ModalBuilder().setCustomId('describe:form').setTitle('Describe your server');
+
+  modal.addComponents(
+    new ActionRowBuilder().addComponents(new TextInputBuilder()
+      .setCustomId('server')
+      .setLabel('Server name')
+      .setStyle(TextInputStyle.Short)
+      .setMaxLength(80)
+      .setRequired(true)
+      .setValue(pack.server || interaction.guild?.name || '')),
+    new ActionRowBuilder().addComponents(new TextInputBuilder()
+      .setCustomId('about')
+      .setLabel('What is this server about?')
+      .setStyle(TextInputStyle.Paragraph)
+      .setMaxLength(700)
+      .setRequired(true)
+      .setValue(pack.about || '')),
+    new ActionRowBuilder().addComponents(new TextInputBuilder()
+      .setCustomId('tone')
+      .setLabel('Tone (or leave blank for friendly)')
+      .setStyle(TextInputStyle.Short)
+      .setMaxLength(40)
+      .setRequired(false)
+      .setValue(pack.tone || '')),
+    new ActionRowBuilder().addComponents(new TextInputBuilder()
+      .setCustomId('hours')
+      .setLabel('Support hours')
+      .setStyle(TextInputStyle.Short)
+      .setMaxLength(70)
+      .setRequired(false)
+      .setValue(pack.hours || '')),
+    new ActionRowBuilder().addComponents(new TextInputBuilder()
+      .setCustomId('facts')
+      .setLabel('Facts it must never get wrong')
+      .setStyle(TextInputStyle.Paragraph)
+      .setMaxLength(700)
+      .setRequired(false)
+      .setValue(pack.hardFacts || '')),
   );
 
-  return reply(interaction, `${prefix}\n\n**Describe your server first:** ${url}\n\nIt takes one form: what the server is, tone, hours, hard facts, escalation rules and your saved answers. Everything else unlocks when you save it.`, { components: [row] });
+  return interaction.showModal(modal);
+}
+
+async function saveDescribeModal(interaction) {
+  await interaction.deferReply({ flags: MessageFlags.Ephemeral });
+
+  const server = interaction.fields.getTextInputValue('server').trim();
+  const about = interaction.fields.getTextInputValue('about').trim();
+  const tone = interaction.fields.getTextInputValue('tone').trim() || 'Friendly & casual';
+  const hours = interaction.fields.getTextInputValue('hours').trim();
+  const facts = interaction.fields.getTextInputValue('facts').trim();
+
+  await updatePack((pack) => {
+    pack.server = server.slice(0, 80);
+    pack.about = about.slice(0, 700);
+    pack.tone = tone.slice(0, 40);
+    pack.hours = hours.slice(0, 120);
+    pack.hardFacts = facts.slice(0, 700);
+  });
+
+  const record = await guildRecord(interaction.guildId);
+  record.settings.describedAt = Date.now();
+  await save();
+
+  const { clearAllHistory } = require('./converse');
+  clearAllHistory();
+
+  return interaction.editReply({
+    content: 'Saved. Everything is unlocked now — run `/setup` to pick your questions, then `/panel` to open the desk.',
+  });
 }
 
 async function ensureDescribed(interaction) {
@@ -413,7 +509,7 @@ async function handleDescribe(interaction) {
   const existing = await loadPack();
 
   const status = record.settings.describedAt
-    ? `Description on file (saved <t:${Math.floor(record.settings.describedAt / 1000)}:R>), ${existing.answers.length} saved answer${existing.answers.length === 1 ? '' : 's'}. Open the page to change it.`
+    ? `Description on file (saved <t:${Math.floor(record.settings.describedAt / 1000)}:R>) with ${existing.answers.length} saved answer${existing.answers.length === 1 ? '' : 's'}. You can rewrite it any time.`
     : 'Nothing saved yet — this is the first thing the bot needs.';
 
   return promptDescribe(interaction, status);
@@ -844,6 +940,7 @@ async function handleTicketButton(interaction) {
 }
 
 async function handleModal(interaction) {
+  if (interaction.customId === 'describe:form') return saveDescribeModal(interaction);
   if (interaction.customId === 'setup:intake') return confirmSetup(interaction);
   if (interaction.customId === 'panel:lanes') return confirmPanel(interaction);
   if (interaction.customId.startsWith('panel:intake:')) return handleIntake(interaction);
@@ -1172,6 +1269,10 @@ async function route(interaction, client) {
 
     if (interaction.isStringSelectMenu() && interaction.customId === 'panel:open') {
       return await handlePanelSelect(interaction);
+    }
+
+    if (interaction.isButton() && interaction.customId === 'describe:form') {
+      return await describeModal(interaction);
     }
 
     if (interaction.isButton() && interaction.customId.startsWith('ticket:')) {

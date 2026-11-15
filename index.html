@@ -243,77 +243,6 @@
   .feat.wide{grid-column:span 2}
   .feat.mag .ico{background:rgba(255,46,230,.1);border-color:rgba(255,46,230,.26);color:#ff7aee}
 
-  /* ---------- playground ---------- */
-  .play{
-    border-radius:var(--radius-lg);border:1px solid var(--line-strong);
-    background:linear-gradient(180deg, rgba(13,26,51,.9), rgba(8,16,32,.92));
-    box-shadow:var(--shadow);overflow:hidden;
-  }
-  .play-top{
-    display:flex;align-items:center;justify-content:space-between;gap:16px;
-    padding:16px 22px;border-bottom:1px solid var(--line);
-    background:rgba(255,255,255,.015);flex-wrap:wrap;
-  }
-  .play-top .left{display:flex;align-items:center;gap:12px;font-size:13.5px;color:var(--muted)}
-  .play-top .left .badge{font-size:10.5px;letter-spacing:.1em;text-transform:uppercase;padding:4px 8px;border-radius:6px;background:rgba(95,255,224,.12);color:var(--mint);border:1px solid rgba(95,255,224,.25);font-weight:600}
-  .play-body{display:grid;grid-template-columns:1fr .92fr;min-height:520px}
-  .play-form{padding:24px 24px 28px;border-right:1px solid var(--line)}
-  .tabs{display:flex;gap:4px;padding:4px;background:rgba(0,0,0,.28);border-radius:11px;margin-bottom:22px;border:1px solid var(--line)}
-  .tab{
-    flex:1;padding:9px 10px;border:0;border-radius:8px;background:transparent;
-    font-size:12.5px;font-weight:600;color:var(--muted);cursor:pointer;transition:.2s;
-    white-space:nowrap;
-  }
-  .tab.active{background:rgba(37,217,255,.14);color:#dff4ff;box-shadow:inset 0 0 0 1px rgba(37,217,255,.3)}
-  .field{margin-bottom:16px}
-  .field label{display:block;font-size:12px;letter-spacing:.04em;color:var(--muted);margin-bottom:7px;font-weight:500}
-  .field label .hint{color:var(--muted-2);font-weight:400;text-transform:none;letter-spacing:0}
-  input[type=text],textarea,select{
-    width:100%;padding:11px 13px;border-radius:10px;
-    background:rgba(0,0,0,.32);border:1px solid var(--line-strong);
-    color:var(--text);font-family:var(--font-body);font-size:13.5px;outline:none;
-    transition:border-color .2s, box-shadow .2s, background .2s;
-  }
-  textarea{resize:vertical;min-height:92px;line-height:1.55}
-  input:focus,textarea:focus,select:focus{border-color:rgba(37,217,255,.65);box-shadow:0 0 0 3px rgba(37,217,255,.12);background:rgba(0,0,0,.42)}
-  select{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' fill='none'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%238ea4c6' stroke-width='1.6' stroke-linecap='round'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 13px center;padding-right:34px}
-  select option{background:#0d1a33;color:var(--text)}
-  .row{display:grid;grid-template-columns:1fr 1fr;gap:12px}
-
-  .faq-list{display:flex;flex-direction:column;gap:8px;margin-top:10px}
-  .faq-item{
-    display:flex;align-items:flex-start;gap:10px;padding:10px 12px;border-radius:10px;
-    background:rgba(0,0,0,.26);border:1px solid var(--line);font-size:12.5px;color:#c6d8ee;
-  }
-  .faq-item .q{font-weight:600;color:#eaf5ff;display:block;margin-bottom:2px}
-  .faq-item button{
-    margin-left:auto;background:none;border:0;color:var(--muted-2);cursor:pointer;padding:0 2px;font-size:16px;line-height:1;transition:color .2s;flex:0 0 auto;
-  }
-  .faq-item button:hover{color:#ff6ae8}
-  .add-faq{display:flex;gap:8px;margin-top:10px}
-  .add-faq input{flex:1}
-  .add-faq button{flex:0 0 auto;padding:0 16px;border-radius:10px;border:1px solid rgba(37,217,255,.4);background:rgba(37,217,255,.12);color:#d9f4ff;font-size:13px;font-weight:600;cursor:pointer}
-  .add-faq button:hover{background:rgba(37,217,255,.22)}
-
-  .tabpane{display:none}
-  .tabpane.active{display:block;animation:fade .3s}
-  @keyframes fade{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
-
-  .play-preview{padding:22px;background:rgba(0,0,0,.18);display:flex;flex-direction:column}
-  .chan{display:flex;align-items:center;gap:8px;padding-bottom:14px;border-bottom:1px solid var(--line);font-size:13px;font-weight:600;color:#d8e9ff}
-  .chan svg{width:16px;height:16px;color:var(--muted-2)}
-  .chan .pill{margin-left:auto;font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:var(--mint);background:rgba(95,255,224,.1);padding:3px 7px;border-radius:5px;border:1px solid rgba(95,255,224,.22)}
-  #chat{flex:1;overflow-y:auto;padding:6px 2px 14px;max-height:430px;scrollbar-width:thin;scrollbar-color:rgba(37,217,255,.3) transparent}
-  #chat::-webkit-scrollbar{width:6px}
-  #chat::-webkit-scrollbar-thumb{background:rgba(37,217,255,.25);border-radius:99px}
-
-  .ask{display:flex;gap:8px;flex-wrap:wrap;margin-top:auto;padding-top:12px;border-top:1px solid var(--line)}
-  .chip{
-    padding:7px 12px;border-radius:999px;border:1px solid var(--line-strong);
-    background:rgba(255,255,255,.02);font-size:12px;color:var(--muted);cursor:pointer;transition:.2s;
-  }
-  .chip:hover{border-color:rgba(37,217,255,.6);color:#dff4ff;background:rgba(37,217,255,.08)}
-
   /* ---------- steps ---------- */
   .steps{display:grid;grid-template-columns:repeat(3,1fr);gap:20px;counter-reset:s}
   .step{
@@ -525,7 +454,6 @@
 
     <nav class="nav-links" aria-label="Main">
       <a href="#features">Features</a>
-      <a href="#knowledge">Server memory</a>
       <a href="#how">How it works</a>
       <a href="#commands">Commands</a>
       <a href="#free">Free</a>
@@ -540,7 +468,6 @@
 
   <div class="mobile-menu wrap" id="mobileMenu">
     <a href="#features">Features</a>
-    <a href="#knowledge">Server memory</a>
     <a href="#how">How it works</a>
     <a href="#commands">Commands</a>
     <a href="#free">Free</a>
@@ -567,7 +494,7 @@
             <svg width="17" height="17" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M20.3 4.5A19 19 0 0 0 15.6 3l-.4.8a14 14 0 0 0-6.3 0L8.4 3a19 19 0 0 0-4.7 1.5C.9 9.1.2 13.6.5 18a19 19 0 0 0 5.7 2.9l.7-1.2a12 12 0 0 1-1.9-.9l.5-.4a13.6 13.6 0 0 0 11.6 0l.5.4c-.6.4-1.3.7-1.9.9l.7 1.2a19 19 0 0 0 5.7-2.9c.4-5.1-.6-9.6-3.8-13.5ZM8.6 15.3c-1.1 0-2-1-2-2.3s.9-2.3 2-2.3 2 1 2 2.3-.9 2.3-2 2.3Zm6.8 0c-1.1 0-2-1-2-2.3s.9-2.3 2-2.3 2 1 2 2.3-.9 2.3-2 2.3Z"/></svg>
             Add to Discord
           </a>
-          <a class="btn btn-ghost" href="#knowledge">Try the knowledge editor</a>
+          <a class="btn btn-ghost" href="#commands">See the commands</a>
         </div>
         <div class="hero-note">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg>
@@ -694,156 +621,6 @@
           <h3>Welcome embeds, built in</h3>
           <p>No embed builder to fight. <code>/welcome</code> writes the embed itself — avatar, member number, join timestamp, your line of copy — and makes <code>#welcome</code> if you do not have one.</p>
         </article>
-      </div>
-    </div>
-  </section>
-
-  <!-- ============ KNOWLEDGE PLAYGROUND ============ -->
-  <section id="knowledge">
-    <div class="wrap">
-      <div class="sec-head reveal">
-        <div class="kicker">Server memory</div>
-        <h2>Tell it about your server. Watch it answer.</h2>
-        <p>This is the actual editor, running live in your browser. Fill the fields on the left — description, tone, hours, FAQs — then fire a question and see the first reply change. What you save here becomes the pack CenterSide loads on every ticket.</p>
-      </div>
-
-      <div class="play reveal">
-        <div class="play-top">
-          <div class="left">
-            <span class="badge">live editor</span>
-            <span>draft pack · <strong id="packNameLabel">Nova Labs</strong></span>
-          </div>
-          <button class="btn btn-ghost btn-sm" id="copyPack" type="button">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="9" y="9" width="12" height="12" rx="2"/><path d="M5 15V5a2 2 0 0 1 2-2h10"/></svg>
-            Copy pack JSON
-          </button>
-        </div>
-
-        <div class="play-body">
-          <!-- form -->
-          <div class="play-form">
-            <div class="tabs" role="tablist" aria-label="Pack sections">
-              <button class="tab active" role="tab" aria-selected="true" data-tab="context">Context</button>
-              <button class="tab" role="tab" aria-selected="false" data-tab="answers">Answers</button>
-              <button class="tab" role="tab" aria-selected="false" data-tab="rules">Escalation</button>
-            </div>
-
-            <div class="tabpane active" id="pane-context">
-              <div class="field">
-                <label for="f-name">Server name</label>
-                <input type="text" id="f-name" value="Nova Labs" maxlength="60" />
-              </div>
-              <div class="field">
-                <label for="f-about">What is this server about? <span class="hint">— the bot reads this before every reply</span></label>
-                <textarea id="f-about" maxlength="700">A Roblox development community for scripters, builders and UI designers. We host weekly build jams, share open-source modules in #resources, and run a small paid asset store. Most tickets are about missing purchases, script errors, or how to join the jam.</textarea>
-              </div>
-              <div class="row">
-                <div class="field">
-                  <label for="f-tone">Tone</label>
-                  <select id="f-tone">
-                    <option>Friendly &amp; casual</option>
-                    <option>Professional</option>
-                    <option>Short &amp; blunt</option>
-                    <option>Playful</option>
-                  </select>
-                </div>
-                <div class="field">
-                  <label for="f-hours">Support hours</label>
-                  <input type="text" id="f-hours" value="9am–11pm CET, 7 days" maxlength="70" />
-                </div>
-              </div>
-              <div class="field">
-                <label for="f-extra">Anything else it must never get wrong? <span class="hint">— hard facts, prices, links</span></label>
-                <textarea id="f-extra" style="min-height:76px" maxlength="400">The asset store is store.novalabs.gg. Refunds only within 14 days and only for duplicate purchases. Never promise a release date for the jam map.</textarea>
-              </div>
-            </div>
-
-            <div class="tabpane" id="pane-answers">
-              <div class="field">
-                <label>Saved answers <span class="hint">— matched by keyword before the model writes anything</span></label>
-                <div class="faq-list" id="faqList"></div>
-              </div>
-              <div class="field" style="margin-bottom:0">
-                <label for="faqQ">Add a question</label>
-                <div class="add-faq">
-                  <input type="text" id="faqQ" placeholder="How do I get my purchase role?" maxlength="120" />
-                  <button type="button" id="addFaq">Add</button>
-                </div>
-                <div class="field" style="margin:8px 0 0">
-                  <input type="text" id="faqA" placeholder="Answer the bot should give…" maxlength="240" />
-                </div>
-              </div>
-            </div>
-
-            <div class="tabpane" id="pane-rules">
-              <div class="field">
-                <label for="f-escalate">Escalate to a human when…</label>
-                <textarea id="f-escalate" maxlength="400">The member mentions a chargeback, a legal threat, or a compromised account. Also escalate if a purchase is missing for more than 2 hours, or if the member asks the same question twice.</textarea>
-              </div>
-              <div class="row">
-                <div class="field">
-                  <label for="f-sla">First reply SLA</label>
-                  <select id="f-sla">
-                    <option>15 minutes</option>
-                    <option>1 hour</option>
-                    <option>4 hours</option>
-                    <option>24 hours</option>
-                  </select>
-                </div>
-                <div class="field">
-                  <label for="f-close">Auto-close silence</label>
-                  <select id="f-close">
-                    <option>24 hours</option>
-                    <option>48 hours</option>
-                    <option>72 hours</option>
-                    <option>Never</option>
-                  </select>
-                </div>
-              </div>
-              <div class="field" style="margin-bottom:0">
-                <label>Ticket lanes</label>
-                <div class="faq-list">
-                  <div class="faq-item"><span><span class="q">Billing</span>@Billing · priority</span></div>
-                  <div class="faq-item"><span><span class="q">Script help</span>@Devs · 1h SLA</span></div>
-                  <div class="faq-item"><span><span class="q">Report a member</span>@Mods · private</span></div>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <!-- preview -->
-          <div class="play-preview">
-            <div class="chan">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 3 8 21M16 3l-2 18M3 8h18M3 16h18"/></svg>
-              #ticket-0042
-              <span class="pill" id="modePill">preview</span>
-            </div>
-
-            <div id="chat">
-              <div class="msg">
-                <div class="avatar user">J</div>
-                <div class="body">
-                  <div class="who">juno <span class="time">14:02</span></div>
-                  <p>hey, i bought the asset pack yesterday but the role never showed up. can someone sort it?</p>
-                </div>
-              </div>
-              <div class="msg" id="draftMsg">
-                <div class="avatar">C</div>
-                <div class="body">
-                  <div class="who">CenterSide <span class="tag">bot</span> <span class="time">14:02</span> <span class="tag" style="background:rgba(255,46,230,.16);color:#ff9cf2">draft</span></div>
-                  <p id="draftText">Filling the draft from your pack…</p>
-                </div>
-              </div>
-            </div>
-
-            <div class="ask" id="askRow">
-              <button class="chip" data-q="My purchase role is missing, can you check?">Missing role</button>
-              <button class="chip" data-q="Where do I get my files after buying?">Where are my files</button>
-              <button class="chip" data-q="Can I get a refund on a double purchase?">Refund</button>
-              <button class="chip" data-q="When does the next build jam start?">Build jam</button>
-            </div>
-          </div>
-        </div>
       </div>
     </div>
   </section>
@@ -1053,7 +830,7 @@
         <p>Write the briefing once. Let the desk run itself. Your staff gets their evening back and members stop waiting for a reply that already exists in #rules.</p>
         <div class="hero-actions">
           <a class="btn btn-primary"  rel="noreferrer noopener" href="https://discord.com/oauth2/authorize?client_id=1571623162263765114&permissions=2416045072&scope=bot%20applications.commands" target="_blank" rel="noreferrer noopener">Add CenterSide to Discord</a>
-          <a class="btn btn-ghost" href="#knowledge">Rebuild the pack</a>
+          <a class="btn btn-ghost" href="#commands">Rebuild the pack</a>
         </div>
       </div>
     </div>
@@ -1081,7 +858,6 @@
         <h4>Product</h4>
         <ul>
           <li><a href="#features">Features</a></li>
-          <li><a href="#knowledge">Server memory</a></li>
           <li><a href="#free">Free</a></li>
           <li><a href="#commands">Changelog</a></li>
         </ul>
@@ -1222,265 +998,6 @@
     });
   });
 
-  /* ------------------------------------------------------------------ */
-  /* knowledge pack editor                                               */
-  /* ------------------------------------------------------------------ */
-  var state = {
-    faqs: [
-      { q: "How do I get my purchase role?", a: "Roles sync automatically within a minute of checkout on store.novalabs.gg. If it's been longer than that, we fix it by hand — no need to buy again.", k: ["purchase", "role", "bought", "buy", "missing", "never"] },
-      { q: "Where are my files after buying?", a: "Your download link is emailed instantly and also lives under Purchases on store.novalabs.gg. Check spam before we resend.", k: ["file", "files", "download", "where", "link", "get"] },
-      { q: "Can I get a refund?", a: "Refunds are given for duplicate purchases within 14 days. Open one ticket per order and include the order ID from the receipt.", k: ["refund", "money", "back", "chargeback", "cancel"] },
-      { q: "When does the build jam start?", a: "Build jams run every Saturday at 18:00 CET. The theme drops in #announcements an hour before and submissions close Sunday night.", k: ["jam", "build", "event", "start", "when", "saturday"] }
-    ],
-    activeFaq: 0
-  };
-
-  var elName = document.getElementById("f-name");
-  var elAbout = document.getElementById("f-about");
-  var elTone = document.getElementById("f-tone");
-  var elHours = document.getElementById("f-hours");
-  var elExtra = document.getElementById("f-extra");
-  var elSla = document.getElementById("f-sla");
-  var elEscalate = document.getElementById("f-escalate");
-  var elClose = document.getElementById("f-close");
-  var faqList = document.getElementById("faqList");
-  var faqQ = document.getElementById("faqQ");
-  var faqA = document.getElementById("faqA");
-  var chat = document.getElementById("chat");
-  var draftText = document.getElementById("draftText");
-  var packNameLabel = document.getElementById("packNameLabel");
-  var modePill = document.getElementById("modePill");
-
-  var openers = {
-    "Friendly & casual": "Hey {name} — good timing, I can sort this out.",
-    "Professional": "Hello {name}, thank you for reaching out.",
-    "Short & blunt": "{name} — got it. Here's the situation.",
-    "Playful": "Ooh, {name}, you caught us mid-coffee. Let's fix it."
-  };
-
-  function esc(str) {
-    return String(str).replace(/[&<>"']/g, function (c) {
-      return ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c];
-    });
-  }
-
-  function firstSentence(text) {
-    var clean = String(text || "").replace(/\s+/g, " ").trim();
-    if (!clean) return "";
-    var m = clean.match(/^.*?[.!?](\s|$)/);
-    var out = m ? m[0].trim() : clean;
-    if (out.length > 190) out = out.slice(0, 187).trim() + "…";
-    return out;
-  }
-
-  function matchFaq(question) {
-    var q = question.toLowerCase();
-    var best = null;
-    var bestScore = 0;
-    state.faqs.forEach(function (item) {
-      var score = 0;
-      item.k.forEach(function (kw) {
-        if (q.indexOf(kw) !== -1) score += 1;
-      });
-      if (score > bestScore) { bestScore = score; best = item; }
-    });
-    return bestScore >= 1 ? best : null;
-  }
-
-  function buildDraft(question) {
-    var name = (elName.value || "your server").trim();
-    var tone = elTone.value;
-    var hours = (elHours.value || "normal support hours").trim();
-    var about = firstSentence(elAbout.value);
-    var extra = firstSentence(elExtra.value);
-    var sla = elSla.value;
-    var escalate = firstSentence(elEscalate.value);
-
-    var opener = (openers[tone] || openers["Friendly & casual"]).replace("{name}", name);
-    var hit = matchFaq(question);
-    var body;
-
-    if (hit) {
-      body = hit.a;
-    } else if (/refund|charge|money|payment|bought|purchase|order/i.test(question)) {
-      body = "That's a purchase question, so I've pulled what I have on file: " +
-             (extra || "orders on this server are handled by the store team") + ".";
-    } else if (/when|time|hours|open|available/i.test(question)) {
-      body = "Our support hours are " + hours + ". Anything that lands outside that gets picked up first thing next window.";
-    } else {
-      body = (about ? "Quick context so you know who you're talking to: " + about + " " : "") +
-             "I don't have an approved answer for that exact question yet, so rather than guess I'm routing it to a human.";
-    }
-
-    var close;
-    if (hit) {
-      close = "If that doesn't match what you're seeing, reply here and I'll pull a human in. First reply target is " +
-              sla + " during " + hours + ".";
-    } else {
-      close = "A human takes over from here — target " + sla + " during " + hours + "." +
-              (escalate ? " Escalation rule: " + escalate : "");
-    }
-
-    return { opener: opener, body: body, close: close, hit: hit };
-  }
-
-  function renderFaqs() {
-    if (!faqList) return;
-    faqList.innerHTML = "";
-    state.faqs.forEach(function (item, i) {
-      var row = document.createElement("div");
-      row.className = "faq-item";
-      var text = document.createElement("span");
-      var q = document.createElement("span");
-      q.className = "q";
-      q.textContent = item.q;
-      var a = document.createElement("span");
-      a.textContent = item.a.length > 96 ? item.a.slice(0, 93) + "…" : item.a;
-      text.appendChild(q);
-      text.appendChild(a);
-
-      var del = document.createElement("button");
-      del.type = "button";
-      del.setAttribute("aria-label", "Remove answer");
-      del.textContent = "×";
-      del.addEventListener("click", function () {
-        state.faqs.splice(i, 1);
-        renderFaqs();
-      });
-
-      row.appendChild(text);
-      row.appendChild(del);
-      faqList.appendChild(row);
-    });
-  }
-
-  function typeDraft(question) {
-    if (!draftText) return;
-    var draft = buildDraft(question);
-    var html = "<strong>" + esc(draft.opener) + "</strong> " + esc(draft.body) +
-      " <span style=\"color:#8ea4c6\">" + esc(draft.close) + "</span>";
-
-    draftText.innerHTML = "<span class=\"typing\"><i></i><i></i><i></i></span>";
-    if (modePill) modePill.textContent = "generating";
-
-    setTimeout(function () {
-      draftText.innerHTML = html;
-      if (modePill) modePill.textContent = draft.hit ? "matched answer" : "escalated";
-    }, 520);
-  }
-
-  if (faqQ && faqA) {
-    document.getElementById("addFaq").addEventListener("click", function () {
-      var q = faqQ.value.trim();
-      var a = faqA.value.trim();
-      if (!q || !a) {
-        faqQ.focus();
-        return;
-      }
-      var keywords = q.toLowerCase()
-        .replace(/[^a-z0-9\s]/g, " ")
-        .split(/\s+/)
-        .filter(function (w) { return w.length > 3; });
-      state.faqs.push({ q: q, a: a, k: keywords.length ? keywords : [q.toLowerCase()] });
-      faqQ.value = "";
-      faqA.value = "";
-      renderFaqs();
-    });
-  }
-
-  document.querySelectorAll(".tab").forEach(function (tab) {
-    tab.addEventListener("click", function () {
-      document.querySelectorAll(".tab").forEach(function (t) {
-        t.classList.remove("active");
-        t.setAttribute("aria-selected", "false");
-      });
-      document.querySelectorAll(".tabpane").forEach(function (p) { p.classList.remove("active"); });
-      tab.classList.add("active");
-      tab.setAttribute("aria-selected", "true");
-      var pane = document.getElementById("pane-" + tab.getAttribute("data-tab"));
-      if (pane) pane.classList.add("active");
-    });
-  });
-
-  document.querySelectorAll(".chip").forEach(function (chip) {
-    chip.addEventListener("click", function () {
-      var q = chip.getAttribute("data-q");
-      var bubble = document.createElement("div");
-      bubble.className = "msg";
-      bubble.innerHTML =
-        '<div class="avatar user">J</div>' +
-        '<div class="body"><div class="who">juno <span class="time">now</span></div>' +
-        "<p>" + esc(q) + "</p></div>";
-      chat.insertBefore(bubble, document.getElementById("draftMsg") || null);
-
-      var draftMsg = document.getElementById("draftMsg");
-      if (draftMsg) chat.appendChild(draftMsg);
-
-      typeDraft(q);
-      chat.scrollTop = chat.scrollHeight;
-    });
-  });
-
-  [elName, elAbout, elTone, elHours, elExtra, elSla, elEscalate].forEach(function (input) {
-    if (!input) return;
-    input.addEventListener("input", function () {
-      if (packNameLabel) packNameLabel.textContent = (elName.value || "unnamed").trim() || "unnamed";
-    });
-  });
-
-  /* copy pack json */
-  var copyBtn = document.getElementById("copyPack");
-  if (copyBtn) {
-    copyBtn.addEventListener("click", function () {
-      var pack = {
-        server: (elName.value || "").trim(),
-        about: (elAbout.value || "").trim(),
-        tone: elTone.value,
-        hours: (elHours.value || "").trim(),
-        hard_facts: (elExtra.value || "").trim(),
-        sla_first_reply: elSla.value,
-        auto_close: elClose ? elClose.value : "24 hours",
-        escalate_when: (elEscalate.value || "").trim(),
-        answers: state.faqs.map(function (f) { return { question: f.q, answer: f.a, keywords: f.k }; })
-      };
-
-      function fallbackCopy(text) {
-        var ta = document.createElement("textarea");
-        ta.value = text;
-        ta.style.position = "fixed";
-        ta.style.opacity = "0";
-        document.body.appendChild(ta);
-        ta.select();
-        try { document.execCommand("copy"); } catch (err) { /* clipboard blocked */ }
-        document.body.removeChild(ta);
-      }
-
-      var json = JSON.stringify(pack, null, 2);
-      if (navigator.clipboard && navigator.clipboard.writeText) {
-        navigator.clipboard.writeText(json).catch(function () { fallbackCopy(json); });
-      } else {
-        fallbackCopy(json);
-      }
-
-      var original = copyBtn.innerHTML;
-      copyBtn.innerHTML = "Copied ✓";
-      setTimeout(function () { copyBtn.innerHTML = original; }, 1600);
-    });
-  }
-
-  renderFaqs();
-  typeDraft("My purchase role is missing, can you check?");
-
-  /* nudge the draft whenever the pack changes meaningfully */
-  var toneTimer = null;
-  if (elTone) {
-    elTone.addEventListener("change", function () {
-      clearTimeout(toneTimer);
-      toneTimer = setTimeout(function () {
-        typeDraft("My purchase role is missing, can you check?");
-      }, 120);
-    });
-  }
 })();
 </script>
 </body>

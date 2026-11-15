@@ -86,6 +86,21 @@ check('setup:intake (five question slots)', () => {
   return modal;
 });
 
+check('describe:form (five fields)', () => {
+  const modal = new ModalBuilder().setCustomId('describe:form').setTitle('Describe your server');
+  [
+    ['server', 'Server name', TextInputStyle.Short, 80],
+    ['about', 'What is this server about?', TextInputStyle.Paragraph, 700],
+    ['tone', 'Tone (or leave blank for friendly)', TextInputStyle.Short, 40],
+    ['hours', 'Support hours', TextInputStyle.Short, 70],
+    ['facts', 'Facts it must never get wrong', TextInputStyle.Paragraph, 700],
+  ].forEach(([id, label, style, max]) => {
+    modal.addComponents(new ActionRowBuilder().addComponents(new TextInputBuilder()
+      .setCustomId(id).setLabel(label).setStyle(style).setMaxLength(max).setRequired(false)));
+  });
+  return modal;
+});
+
 check('panel:lanes (five option slots)', () => {
   const modal = new ModalBuilder().setCustomId('panel:lanes').setTitle('Ticket options');
   ['Billing', 'Script help', 'Report a member', 'Something else', ''].forEach((label, i) => {

@@ -30,6 +30,18 @@ async function main() {
   } else {
     await rest.put(Routes.applicationCommands(config.clientId), { body: commands });
     console.log(`Registered ${commands.length} commands globally (can take up to an hour to appear).`);
+
+    // Clear per-guild copies for servers this install already knows about, or the
+    // commands show up twice in those guilds.
+    try {
+      const state = JSON.parse(require('node:fs').readFileSync(config.stateFile, 'utf8'));
+      for (const guildId of Object.keys(state.guilds || {})) {
+        await rest.put(Routes.applicationGuildCommands(config.clientId, guildId), { body: [] });
+        console.log(`Cleared guild-scoped commands in ${guildId}.`);
+      }
+    } catch {
+      // fresh install, no state file yet
+    }
   }
 }
 
