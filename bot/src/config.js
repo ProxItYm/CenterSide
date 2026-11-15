@@ -30,6 +30,7 @@ module.exports = {
     logChannelId: null,
     panelChannelId: null,
     panelMessageId: null,
+    describedAt: null,
     staffRoleIds: [],
     autoAnswer: true,
     autoCloseHours: 24,

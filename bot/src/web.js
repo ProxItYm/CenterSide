@@ -217,6 +217,9 @@ async function handle(req, res) {
     // Old assistant turns mention the previous server description; drop them.
     require('./converse').clearAllHistory();
 
+    settings.describedAt = Date.now();
+    await save();
+
     res.writeHead(303, { Location: `/g/${token}?saved=1` });
     res.end();
     return;

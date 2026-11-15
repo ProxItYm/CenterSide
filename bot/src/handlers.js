@@ -134,6 +134,33 @@ async function ensureLogChannel(guild, settings, category, staffRoleIds) {
   return log;
 }
 
+/**
+ * Every admin action needs a finished description first. /describe is the only
+ * command that works on a fresh install; everything else points back at it.
+ */
+async function promptDescribe(interaction, prefix) {
+  const record = await guildRecord(interaction.guildId);
+  record.settings.guildName = interaction.guild?.name || record.settings.guildName;
+  const token = web.tokenFor(record.settings);
+  await save();
+  web.start();
+
+  const url = web.urlFor(token);
+  const row = new ActionRowBuilder().addComponents(
+    new ButtonBuilder().setLabel('Open the setup page').setEmoji('📝').setStyle(ButtonStyle.Link).setURL(url),
+  );
+
+  return reply(interaction, `${prefix}\n\n**Describe your server first:** ${url}\n\nIt takes one form: what the server is, tone, hours, hard facts, escalation rules and your saved answers. Everything else unlocks when you save it.`, { components: [row] });
+}
+
+async function ensureDescribed(interaction) {
+  const record = await guildRecord(interaction.guildId);
+  if (record.settings.describedAt) return true;
+  const label = interaction.commandName ? `\`/${interaction.commandName}\`` : 'This action';
+  await promptDescribe(interaction, `${label} is locked until CenterSide knows what this server is.`);
+  return false;
+}
+
 function settingsEmbed(guild, settings) {
   const channel = (id) => (id ? `<#${id}>` : 'not set');
   return baseEmbed()
@@ -151,6 +178,7 @@ function settingsEmbed(guild, settings) {
 }
 
 async function handleSetup(interaction) {
+  if (!(await ensureDescribed(interaction))) return;
   const pack = await loadPack();
   const modal = new ModalBuilder().setCustomId('setup:brief').setTitle('Tell the bot about your server');
 
@@ -200,6 +228,7 @@ async function handleSetup(interaction) {
 }
 
 async function handleEdit(interaction) {
+  if (!(await ensureDescribed(interaction))) return;
   const record = await guildRecord(interaction.guildId);
   const settings = record.settings;
 
@@ -343,35 +372,17 @@ async function ensurePanelForGuild(guild) {
 
 async function handleDescribe(interaction) {
   const record = await guildRecord(interaction.guildId);
-  record.settings.guildName = interaction.guild.name;
-  const token = web.tokenFor(record.settings);
-  await save();
-
-  web.start();
-  const url = web.urlFor(token);
-
-  const row = new ActionRowBuilder().addComponents(
-    new ButtonBuilder()
-      .setLabel('Open the setup page')
-      .setEmoji('📝')
-      .setStyle(ButtonStyle.Link)
-      .setURL(url),
-  );
-
   const existing = await loadPack();
 
-  return reply(interaction, [
-    '**Write the full description here:**',
-    url,
-    '',
-    'The page asks what the server is, tone, hours, hard facts, escalation triggers, and every saved answer — all in one form. Saving it writes straight into the bot, so the next reply uses it.',
-    `Current pack: ${existing.answers.length} saved answer${existing.answers.length === 1 ? '' : 's'}, ${existing.about ? `${existing.about.length} characters of description` : 'no description yet'}.`,
-    '',
-    'The link only works on the machine running the bot (127.0.0.1) and contains a private token — treat it like a password.',
-  ].join('\n'), { components: [row] });
+  const status = record.settings.describedAt
+    ? `Description on file (saved <t:${Math.floor(record.settings.describedAt / 1000)}:R>), ${existing.answers.length} saved answer${existing.answers.length === 1 ? '' : 's'}. Open the page to change it.`
+    : 'Nothing saved yet — this is the first thing the bot needs.';
+
+  return promptDescribe(interaction, status);
 }
 
 async function handlePanel(interaction) {
+  if (!(await ensureDescribed(interaction))) return;
   const settings = await settingsFor(interaction.guildId);
   if (!settings.categoryId) {
     return reply(interaction, 'Run `/setup` first — it creates the ticket category and transcript channel for you.');
@@ -392,6 +403,7 @@ async function handlePanel(interaction) {
 /* ------------------------------------------------------------------ */
 
 async function handleAnswer(interaction) {
+  if (!(await ensureDescribed(interaction))) return;
   const modal = new ModalBuilder().setCustomId('knowledge:add').setTitle('New saved answer');
   const question = new TextInputBuilder()
     .setCustomId('question')
@@ -414,6 +426,7 @@ async function handleAnswer(interaction) {
 }
 
 async function handleAnswers(interaction) {
+  if (!(await ensureDescribed(interaction))) return;
   const removeId = interaction.options.getString('remove');
 
   if (removeId) {
@@ -453,6 +466,7 @@ async function handleAnswers(interaction) {
 /* ------------------------------------------------------------------ */
 
 async function handleWelcome(interaction) {
+  if (!(await ensureDescribed(interaction))) return;
   const record = await guildRecord(interaction.guildId);
   const settings = record.settings;
 
@@ -519,6 +533,7 @@ async function handleMemberJoin(member) {
 /* ------------------------------------------------------------------ */
 
 async function handleStats(interaction) {
+  if (!(await ensureDescribed(interaction))) return;
   const record = await guildRecord(interaction.guildId);
   const history = record.history || [];
   const open = Object.values(record.tickets || {});
@@ -558,6 +573,11 @@ async function handleStats(interaction) {
 /* ------------------------------------------------------------------ */
 
 async function handlePanelSelect(interaction) {
+  const record = await guildRecord(interaction.guildId);
+  if (!record.settings.describedAt) {
+    return reply(interaction, 'This server has not finished setup yet — an admin needs to run `/describe` once.');
+  }
+
   const category = interaction.values[0];
   if (!panelCategories.some((c) => c.value === category)) {
     return reply(interaction, 'That lane is no longer available.');
