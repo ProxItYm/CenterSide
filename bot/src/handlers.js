@@ -930,6 +930,20 @@ async function handleTicketMessage(message, pack) {
   // Staff replying means no answer from me. The opener can be staff too (owners
   // test their own desk), so opener messages still get an answer.
   if (isStaff(message.member, settings) && !isOpener) {
+    if (!ticket.aiPaused) {
+      ticket.aiPaused = true;
+      ticket.aiPausedBy = message.author.id;
+      await save();
+      console.log(`[ticket] #${ticket.number} staff arrived (${message.author.username}) — AI paused`);
+      await message.channel.send({
+        embeds: [
+          baseEmbed()
+            .setColor(color.quiet)
+            .setDescription(`<@${message.author.id}> is here — I'll stay quiet and leave this to staff.`),
+        ],
+        allowedMentions: { parse: [] },
+      }).catch(() => {});
+    }
     pushHistory(message.channelId, 'assistant', `(staff ${message.author.username} replied)`);
     await save();
     return;
@@ -942,6 +956,11 @@ async function handleTicketMessage(message, pack) {
   if (!isOpener) return;
   if (ticket.claimedBy) {
     console.log(`[auto-answer] skipped #${ticket.number}: claimed by ${ticket.claimedBy}`);
+    return;
+  }
+
+  if (ticket.aiPaused) {
+    console.log(`[auto-answer] skipped #${ticket.number}: staff are handling it`);
     return;
   }
 

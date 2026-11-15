@@ -54,6 +54,7 @@ const record = {
     'chan-7': makeTicket('chan-7', 7),
     'chan-8': makeTicket('chan-8', 8),
     'chan-9': makeTicket('chan-9', 9),
+    'chan-10': makeTicket('chan-10', 10),
   },
   history: [],
 };
@@ -182,10 +183,12 @@ async function main() {
     record.tickets['chan-4'].claimedBy = null;
   });
 
-  await check('non-opener staff message stays silent', async () => {
+  await check('non-opener staff message pauses the desk', async () => {
     const message = fakeMessage({ authorId: 'staff-id', content: 'on it', staff: true, channel: 'chan-5' });
     await handleTicketMessage(message, pack);
-    assert.strictEqual(message.sent.length, 0, 'bot spoke over staff');
+    const said = message.sent.map((m) => m.content || '').join(' ');
+    assert(!/how do i|roles sync|refunds are/i.test(said), 'bot answered the member over staff');
+    assert.strictEqual(record.tickets['chan-5'].aiPaused, true, 'AI not paused when staff arrived');
   });
 
   await check('a bare "Hi" gets a spoken reply', async () => {
@@ -205,6 +208,15 @@ async function main() {
     const message = fakeMessage({ authorId: 'opener-id', content: 'refund', channel: 'chan-7' });
     await handleTicketMessage(message, pack);
     assert(message.sent.length >= 1, 'bot ignored a short but real question');
+  });
+
+  await check('staff arriving silences the bot for the opener too', async () => {
+    const staffMessage = fakeMessage({ authorId: 'staff-id', content: 'on it', staff: true, channel: 'chan-10' });
+    await handleTicketMessage(staffMessage, pack);
+
+    const openerFollowUp = fakeMessage({ authorId: 'opener-id', content: 'how do i get my purchase role', channel: 'chan-10' });
+    await handleTicketMessage(openerFollowUp, pack);
+    assert.strictEqual(openerFollowUp.sent.length, 0, 'bot spoke after staff arrived');
   });
 
   await check('non-ticket channel is ignored', async () => {
