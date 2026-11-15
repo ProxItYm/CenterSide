@@ -29,8 +29,8 @@ function escapeHtml(value) {
 function page({ guildName, token, pack, saved }) {
   const answers = (pack.answers || []).map((a) => `
       <div class="qa" data-id="${escapeHtml(a.id)}">
-        <input class="q" value="${escapeHtml(a.question)}" placeholder="Question members ask" />
-        <textarea class="a" rows="2" placeholder="Approved answer">${escapeHtml(a.answer)}</textarea>
+        <input class="q" value="${escapeHtml(a.question)}" />
+        <textarea class="a" rows="2">${escapeHtml(a.answer)}</textarea>
         <button type="button" class="del" title="Delete">×</button>
       </div>`).join('');
 
@@ -99,14 +99,14 @@ function page({ guildName, token, pack, saved }) {
           ${['Friendly & casual', 'Professional', 'Short & blunt', 'Playful'].map((t) => `<option ${pack.tone === t ? 'selected' : ''}>${t}</option>`).join('')}
         </select></div>
       <div><label>Support hours</label>
-        <input name="hours" value="${escapeHtml(pack.hours)}" placeholder="9am–11pm CET, 7 days" /></div>
+        <input name="hours" value="${escapeHtml(pack.hours)}" /></div>
     </div>
 
     <label>Hard facts it must never get wrong</label>
-    <textarea name="hardFacts" rows="3" maxlength="800" placeholder="Store link, refund policy, prices, release rules…">${escapeHtml(pack.hardFacts)}</textarea>
+    <textarea name="hardFacts" rows="3" maxlength="800">${escapeHtml(pack.hardFacts)}</textarea>
 
     <label>Hand to a human when someone mentions</label>
-    <input name="escalateWhen" value="${escapeHtml(pack.escalateWhen)}" placeholder="chargeback, legal threat, hacked account" />
+    <input name="escalateWhen" value="${escapeHtml(pack.escalateWhen)}" />
 
     <h2>Saved answers</h2>
     <div id="qa-list">${answers}</div>
@@ -121,8 +121,8 @@ function page({ guildName, token, pack, saved }) {
     const list = document.getElementById('qa-list');
     const div = document.createElement('div');
     div.className = 'qa';
-    div.innerHTML = '<input class="q" placeholder="Question members ask" />' +
-      '<textarea class="a" rows="2" placeholder="Approved answer"></textarea>' +
+    div.innerHTML = '<input class="q" />' +
+      '<textarea class="a" rows="2"></textarea>' +
       '<button type="button" class="del" title="Delete" onclick="this.parentElement.remove()">×</button>';
     list.appendChild(div);
     div.querySelector('.q').focus();
@@ -198,7 +198,7 @@ async function handle(req, res) {
     await updatePack((pack) => {
       pack.server = String(form.get('server') || record.settings.guildName || pack.server || '').slice(0, 80);
       pack.about = String(form.get('about') || '').slice(0, 1200);
-      pack.tone = String(form.get('tone') || 'Friendly & casual').slice(0, 40);
+      pack.tone = String(form.get('tone') || '').slice(0, 40);
       pack.hours = String(form.get('hours') || '').slice(0, 120);
       pack.hardFacts = String(form.get('hardFacts') || '').slice(0, 800);
       pack.escalateWhen = String(form.get('escalateWhen') || '').slice(0, 400);

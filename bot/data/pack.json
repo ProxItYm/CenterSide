@@ -1,9 +1,9 @@
 {
-  "server": "CenterSide",
-  "about": "This server is a roblox game called blox fruits with over 5 million players.",
-  "tone": "Friendly & casual",
-  "hours": "24/7",
-  "hardFacts": "TESTING\na",
-  "escalateWhen": "chargeback, legal threat, compromised account, missing purchase longer than 2 hours",
+  "server": "",
+  "about": "",
+  "tone": "",
+  "hours": "",
+  "hardFacts": "",
+  "escalateWhen": "",
   "answers": []
 }

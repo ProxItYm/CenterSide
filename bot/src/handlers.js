@@ -186,7 +186,6 @@ async function handleSetup(interaction) {
     .setCustomId('about')
     .setLabel('What is this server about?')
     .setStyle(TextInputStyle.Paragraph)
-    .setPlaceholder('A Roblox development community. We sell asset packs and run weekly build jams.')
     .setMaxLength(700)
     .setRequired(true)
     .setValue(pack.about || '');
@@ -195,10 +194,9 @@ async function handleSetup(interaction) {
     .setCustomId('tone')
     .setLabel('Tone of voice')
     .setStyle(TextInputStyle.Short)
-    .setPlaceholder('Friendly & casual / Professional / Short & blunt / Playful')
     .setMaxLength(40)
     .setRequired(false)
-    .setValue(pack.tone || 'Friendly & casual');
+    .setValue(pack.tone || '');
 
   const hours = new TextInputBuilder()
     .setCustomId('hours')
@@ -212,7 +210,6 @@ async function handleSetup(interaction) {
     .setCustomId('escalate')
     .setLabel('Hand it to a human when someone mentions…')
     .setStyle(TextInputStyle.Short)
-    .setPlaceholder('chargeback, legal threat, hacked account')
     .setMaxLength(300)
     .setRequired(false)
     .setValue(pack.escalateWhen || '');
@@ -412,7 +409,6 @@ async function handleAnswer(interaction) {
     .setCustomId('question')
     .setLabel('Question members ask')
     .setStyle(TextInputStyle.Short)
-    .setPlaceholder('How do I get my purchase role?')
     .setMaxLength(200)
     .setRequired(true);
   const answer = new TextInputBuilder()
