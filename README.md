@@ -124,7 +124,7 @@ Edit `bot/data/pack.json` directly if you prefer; the site's editor exports the 
 - One auto-reply per channel per 20 seconds, so a stuck loop cannot spam.
 - Escalates on missing answers and on pack-defined triggers (chargeback, legal threat, compromised
   account…) — those also ping the staff roles.
-- Auto-closes tickets that have been silent past the configured window.
+- Auto-closes a ticket 45 seconds after the opener confirms it is sorted (say anything to keep it open), and after the configured silence window (`/edit` does not expose that yet — `RESOLVED_CLOSE_SECONDS` env changes the delay).
 
 Staff silence it permanently with the **Claim** button. Nothing resumes until a new ticket opens.
 

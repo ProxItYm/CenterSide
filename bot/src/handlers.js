@@ -13,7 +13,7 @@ const {
   TextInputStyle,
 } = require('discord.js');
 
-const { panelCategories, color, autoReplyCooldownMs } = require('./config');
+const { panelCategories, color, autoReplyCooldownMs, resolvedCloseSeconds } = require('./config');
 const { panelMessage, baseEmbed, welcomeEmbed } = require('./ui');
 const {
   openTicket,
@@ -41,6 +41,36 @@ const web = require('./web');
 const { guildRecord, settingsFor, save } = require('./state');
 
 const autoReplyAt = new Map();
+const pendingClose = new Map();
+
+function clearPendingClose(channelId) {
+  const timer = pendingClose.get(channelId);
+  if (timer) clearTimeout(timer);
+  pendingClose.delete(channelId);
+}
+
+/** Archiving a resolved ticket, unless someone speaks up first. */
+function scheduleResolvedClose(channel, ticket) {
+  clearPendingClose(channel.id);
+  const timer = setTimeout(async () => {
+    pendingClose.delete(channel.id);
+    try {
+      const record = await guildRecord(channel.guild.id);
+      const live = record.tickets[channel.id];
+      if (!live || live.status === 'closed') return;
+      await closeTicket(
+        channel,
+        { id: channel.client.user.id, tag: 'CenterSide (resolved)' },
+        'Resolved — closed automatically',
+      );
+      console.log(`[ticket] #${live.number} auto-closed after resolution`);
+    } catch (err) {
+      console.error('[auto-close]', err.message);
+    }
+  }, resolvedCloseSeconds * 1000);
+  timer.unref?.();
+  pendingClose.set(channel.id, timer);
+}
 
 function slugify(label) {
   return String(label).toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '').slice(0, 24) || 'lane';
@@ -888,6 +918,9 @@ async function handleTicketMessage(message, pack) {
 
   if (ticket.status === 'closed') return;
 
+  // Any new message means the ticket is still alive.
+  clearPendingClose(message.channelId);
+
   const settings = record.settings;
   ticket.lastActivity = Date.now();
   await save();
@@ -929,6 +962,7 @@ async function handleTicketMessage(message, pack) {
   if (isOpener && /^(?:please\s+)?(?:close|close\s+(?:this|the)?\s*ticket|close\s+this|done|that'?s\s+all|resolved|you\s+can\s+close(?:\s+it)?|no\s+longer\s+needed)\b/i.test(text)) {
     console.log(`[ticket] #${ticket.number} opener asked to close`);
     autoReplyAt.set(message.channelId, Date.now());
+    clearPendingClose(message.channelId);
     await safeReply(message, 'Closing this ticket and saving the transcript. Thanks for the detail — reopen any time.');
     await closeTicket(message.channel, message.author, 'Closed at the opener\'s request');
     return;
@@ -941,8 +975,12 @@ async function handleTicketMessage(message, pack) {
     await save();
     pushHistory(message.channelId, 'user', text);
     pushHistory(message.channelId, 'assistant', 'acknowledged the resolution');
-    console.log(`[auto-answer] #${ticket.number} resolved by member`);
-    await safeReply(message, "Glad that's sorted. If anything else comes up, just reply here — I'll keep this open until you're done.");
+    console.log(`[auto-answer] #${ticket.number} resolved by member — closing in ${resolvedCloseSeconds}s`);
+    await safeReply(
+      message,
+      `Glad that's sorted. I'll close this ticket in ${resolvedCloseSeconds} seconds and file the transcript — say anything before then if you need more.`,
+    );
+    scheduleResolvedClose(message.channel, ticket);
     return;
   }
 

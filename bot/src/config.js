@@ -25,6 +25,9 @@ module.exports = {
   // bot ignoring the member mid-conversation.
   autoReplyCooldownMs: Number(process.env.AUTO_REPLY_COOLDOWN_MS || 1_200),
 
+  // How long a resolved ticket stays open before it archives itself.
+  resolvedCloseSeconds: Number(process.env.RESOLVED_CLOSE_SECONDS || 45),
+
   defaults: {
     categoryId: null,
     logChannelId: null,
