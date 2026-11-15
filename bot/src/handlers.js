@@ -138,8 +138,9 @@ async function handleSetup(interaction) {
 
   const tone = new TextInputBuilder()
     .setCustomId('tone')
-    .setLabel('Tone: Friendly & casual / Professional / Short & blunt / Playful')
+    .setLabel('Tone of voice')
     .setStyle(TextInputStyle.Short)
+    .setPlaceholder('Friendly & casual / Professional / Short & blunt / Playful')
     .setMaxLength(40)
     .setRequired(false)
     .setValue(pack.tone || 'Friendly & casual');
