@@ -31,6 +31,7 @@ module.exports = {
     panelChannelId: null,
     panelMessageId: null,
     describedAt: null,
+    lanes: null,
     staffRoleIds: [],
     autoAnswer: true,
     autoCloseHours: 24,

@@ -42,6 +42,18 @@ const { guildRecord, settingsFor, save } = require('./state');
 
 const autoReplyAt = new Map();
 
+function slugify(label) {
+  return String(label).toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '').slice(0, 24) || 'lane';
+}
+
+/** Configured ticket lanes, or the four defaults. */
+function lanesFor(settings) {
+  const configured = (settings.lanes || [])
+    .filter((lane) => lane && lane.label && lane.value)
+    .slice(0, 5);
+  return configured.length ? configured : panelCategories;
+}
+
 const DEFAULT_INTAKE = [
   'What is the reason for opening this ticket?',
   'Is it urgent or can it wait?',
@@ -366,19 +378,61 @@ async function handleDescribe(interaction) {
 
 async function handlePanel(interaction) {
   if (!(await ensureDescribed(interaction))) return;
-  const settings = await settingsFor(interaction.guildId);
-  if (!settings.categoryId) {
-    return reply(interaction, 'Run `/setup` first — it creates the ticket category and transcript channel for you.');
-  }
-
-  const panelMessageSent = await interaction.channel.send(panelMessage());
 
   const record = await guildRecord(interaction.guildId);
-  record.settings.panelChannelId = interaction.channelId;
-  record.settings.panelMessageId = panelMessageSent.id;
+  const current = lanesFor(record.settings);
+
+  const modal = new ModalBuilder().setCustomId('panel:lanes').setTitle('Ticket options');
+  const inputs = [];
+  for (let i = 0; i < 5; i += 1) {
+    inputs.push(new TextInputBuilder()
+      .setCustomId(`lane${i}`)
+      .setLabel(`Option ${i + 1}${i > 2 ? ' (optional)' : ''}`)
+      .setStyle(TextInputStyle.Short)
+      .setMaxLength(45)
+      .setRequired(false)
+      .setValue(current[i] ? current[i].label : ''));
+  }
+  modal.addComponents(...inputs.map((input) => new ActionRowBuilder().addComponents(input)));
+  return interaction.showModal(modal);
+}
+
+/** Saves the chosen lanes and posts the panel where the command was run. */
+async function confirmPanel(interaction) {
+  await interaction.deferReply({ flags: MessageFlags.Ephemeral });
+
+  const labels = [];
+  for (let i = 0; i < 5; i += 1) {
+    const value = interaction.fields.getTextInputValue(`lane${i}`).trim();
+    if (value) labels.push(value.slice(0, 45));
+  }
+
+  const record = await guildRecord(interaction.guildId);
+  const settings = record.settings;
+
+  settings.lanes = labels.map((label) => {
+    const slug = slugify(label);
+    return { label, value: slug, description: '' };
+  });
+
+  const laneList = lanesFor(settings);
+
+  const sent = await interaction.channel.send(panelMessage(laneList));
+  settings.panelChannelId = interaction.channelId;
+  settings.panelMessageId = sent.id;
   await save();
 
-  return reply(interaction, 'Panel posted. Members pick a lane and get a private channel.');
+  return interaction.editReply({
+    content: [
+      `Panel posted in <#${interaction.channelId}>.`,
+      '',
+      laneList.length
+        ? `Options: ${laneList.map((lane) => `**${lane.label}**`).join(', ')}`
+        : 'No custom options — the four defaults are in place.',
+      '',
+      'Run `/panel` again anywhere to change them; the panel moves with it.',
+    ].join('\n'),
+  });
 }
 
 /* ------------------------------------------------------------------ */
@@ -560,9 +614,11 @@ async function handlePanelSelect(interaction) {
     return reply(interaction, 'This server has not finished setup yet — an admin needs to run `/describe` once.');
   }
 
+  const lanes = lanesFor(record.settings);
   const category = interaction.values[0];
-  if (!panelCategories.some((c) => c.value === category)) {
-    return reply(interaction, 'That lane is no longer available.');
+  const lane = lanes.find((c) => c.value === category);
+  if (!lane) {
+    return reply(interaction, 'That lane is no longer available — the panel may have been updated.');
   }
 
   // Ask the configured questions before the channel exists. The modal must be
@@ -570,7 +626,7 @@ async function handlePanelSelect(interaction) {
   const questions = intakeQuestions(record.settings);
   const modal = new ModalBuilder()
     .setCustomId(`panel:intake:${category}`)
-    .setTitle(panelCategories.find((c) => c.value === category)?.label || 'New ticket');
+    .setTitle(lane.label.slice(0, 45));
 
   questions.forEach((question, index) => {
     modal.addComponents(new ActionRowBuilder().addComponents(
@@ -599,11 +655,13 @@ async function handleIntake(interaction) {
   }));
 
   const pack = await loadPack();
+  const laneConfig = lanesFor(record.settings).find((entry) => entry.value === lane);
   const result = await openTicket({
     guild: interaction.guild,
     member: interaction.member,
     category: lane,
     pack,
+    laneLabel: laneConfig ? laneConfig.label : lane,
   });
 
   if (result.error) return interaction.editReply({ content: result.error });
@@ -744,6 +802,7 @@ async function handleTicketButton(interaction) {
 
 async function handleModal(interaction) {
   if (interaction.customId === 'setup:intake') return confirmSetup(interaction);
+  if (interaction.customId === 'panel:lanes') return confirmPanel(interaction);
   if (interaction.customId.startsWith('panel:intake:')) return handleIntake(interaction);
 
   if (interaction.customId === 'ticket:addmember') {

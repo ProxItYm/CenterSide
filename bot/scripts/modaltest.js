@@ -86,6 +86,16 @@ check('setup:intake (five question slots)', () => {
   return modal;
 });
 
+check('panel:lanes (five option slots)', () => {
+  const modal = new ModalBuilder().setCustomId('panel:lanes').setTitle('Ticket options');
+  ['Billing', 'Script help', 'Report a member', 'Something else', ''].forEach((label, i) => {
+    modal.addComponents(new ActionRowBuilder().addComponents(new TextInputBuilder()
+      .setCustomId(`lane${i}`).setLabel(`Option ${i + 1}`).setStyle(TextInputStyle.Short)
+      .setMaxLength(45).setRequired(false).setValue(label)));
+  });
+  return modal;
+});
+
 check('panel:intake:billing', () => {
   const modal = new ModalBuilder().setCustomId('panel:intake:billing').setTitle('Billing');
   modal.addComponents(

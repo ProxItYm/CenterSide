@@ -19,7 +19,7 @@ function isStaff(member, settings) {
 }
 
 /** Creates the private channel and records the ticket. */
-async function openTicket({ guild, member, category, pack }) {
+async function openTicket({ guild, member, category, pack, laneLabel = '' }) {
   const record = await guildRecord(guild.id);
   const settings = record.settings;
 
@@ -102,7 +102,7 @@ async function openTicket({ guild, member, category, pack }) {
 
   const intro = await channel.send({
     content: `<@${member.id}>`,
-    embeds: [ticketIntro(ticket, pack, member.id)],
+    embeds: [ticketIntro(ticket, pack, member.id, laneLabel)],
     components: ticketButtons(),
   });
   await intro.pin().catch(() => {});

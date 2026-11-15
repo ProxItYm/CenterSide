@@ -15,7 +15,7 @@ function baseEmbed() {
 }
 
 /** The persistent panel: a select menu plus a rules line. No state needed. */
-function panelMessage() {
+function panelMessage(lanes = panelCategories) {
   const embed = baseEmbed()
     .setTitle('CenterSide support')
     .setDescription(
@@ -34,11 +34,11 @@ function panelMessage() {
   const menu = new StringSelectMenuBuilder()
     .setCustomId('panel:open')
     .setPlaceholder('Choose a ticket category…')
-    .addOptions(panelCategories.map((category) => ({
-      label: category.label,
-      value: category.value,
-      description: category.description,
-    })));
+    .addOptions(lanes.slice(0, 25).map((lane) => {
+      const option = { label: lane.label.slice(0, 100), value: lane.value };
+      if (lane.description) option.description = lane.description.slice(0, 100);
+      return option;
+    }));
 
   return {
     embeds: [embed],
@@ -47,8 +47,8 @@ function panelMessage() {
 }
 
 /** Intro embed posted inside a freshly opened ticket. */
-function ticketIntro(ticket, pack, openerId) {
-  const lane = panelCategories.find((c) => c.value === ticket.category);
+function ticketIntro(ticket, pack, openerId, laneLabel = '') {
+  const lane = { label: laneLabel || ticket.category };
   const embed = baseEmbed()
     .setTitle(`${lane ? lane.label : 'Ticket'} · #${ticket.number}`)
     .setDescription(
