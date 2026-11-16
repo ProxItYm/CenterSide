@@ -21,7 +21,8 @@ const commands = [
     .setDefaultMemberPermissions(manage)
     .addRoleOption((option) => option
       .setName('support')
-      .setDescription('Role pinged when a ticket needs a human (run again to add more)')),
+      .setDescription('Role pinged when a ticket needs a human')
+      .setRequired(true)),
 
   new SlashCommandBuilder()
     .setName('edit')
