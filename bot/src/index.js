@@ -1,6 +1,6 @@
 'use strict';
 
-require('dotenv').config();
+require('./env');
 
 const { Client, GatewayIntentBits, Partials, Events } = require('discord.js');
 

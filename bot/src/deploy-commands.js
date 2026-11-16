@@ -1,6 +1,6 @@
 'use strict';
 
-require('dotenv').config();
+require('./env');
 
 const { REST, Routes } = require('discord.js');
 const { commands } = require('./commands');
