@@ -113,6 +113,13 @@ function intakeQuestions(settings) {
 }
 const EPHEMERAL = { flags: MessageFlags.Ephemeral };
 
+/** Role pings for escalations; falls back to the owner if no role is set. */
+function staffMention(settings, guild) {
+  const roles = (settings.staffRoleIds || []).map((id) => `<@&${id}>`).join(' ');
+  if (roles) return roles;
+  return guild?.ownerId ? `<@${guild.ownerId}>` : '';
+}
+
 function staffOnly(member, settings) {
   if (isStaff(member, settings)) return null;
   return 'Staff only — you need the staff role set in `/setup`, or Manage Server.';
@@ -348,6 +355,15 @@ function settingsEmbed(guild, settings) {
 
 async function handleSetup(interaction) {
   if (!(await ensureDescribed(interaction))) return;
+
+  const supportRole = interaction.options.getRole('support');
+  if (supportRole) {
+    const record = await guildRecord(interaction.guildId);
+    const set = new Set(record.settings.staffRoleIds || []);
+    set.add(supportRole.id);
+    record.settings.staffRoleIds = [...set];
+    await save();
+  }
 
   const record = await guildRecord(interaction.guildId);
   const current = intakeQuestions(record.settings);
@@ -986,7 +1002,7 @@ async function answerIntake({ channel, ticket, pack, settings, guild, memberName
     const replyResult = nextReply({ pack, ticket, text: `${reason} ${urgency}`, memberName });
     text = replyResult.text;
     if (replyResult.mode === 'escalate') {
-      const mention = (settings.staffRoleIds || []).map((id) => `<@&${id}>`).join(' ');
+      const mention = staffMention(settings, interaction.guild);
       await channel.send({ content: mention || undefined, embeds: [baseEmbed().setColor(color.warn).setTitle('Needs a human').setDescription(replyResult.text)] }).catch(() => {});
       return;
     }
@@ -1041,7 +1057,7 @@ async function handleTicketButton(interaction) {
     if (denied) return reply(interaction, denied);
     ticket.escalated = true;
     await save();
-    const mention = (settings.staffRoleIds || []).map((id) => `<@&${id}>`).join(' ');
+    const mention = staffMention(settings, message.guild);
     await interaction.channel.send({
       content: mention || undefined,
       embeds: [
@@ -1368,7 +1384,7 @@ Do not escalate. The member's question is answerable from the server map and tic
   await save();
   pushHistory(message.channelId, 'assistant', result.text);
 
-  const mention = (settings.staffRoleIds || []).map((id) => `<@&${id}>`).join(' ');
+  const mention = staffMention(settings, message.guild);
   await safeReply(message, result.text);
 
   await message.channel.send({

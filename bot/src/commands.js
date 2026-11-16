@@ -17,8 +17,11 @@ const manage = PermissionFlagsBits.ManageGuild;
 const commands = [
   new SlashCommandBuilder()
     .setName('setup')
-    .setDescription('First-time setup: creates the channels and asks what your server is about')
-    .setDefaultMemberPermissions(manage),
+    .setDescription('First-time setup: channels, ticket questions and the support role to ping')
+    .setDefaultMemberPermissions(manage)
+    .addRoleOption((option) => option
+      .setName('support')
+      .setDescription('Role pinged when a ticket needs a human (run again to add more)')),
 
   new SlashCommandBuilder()
     .setName('edit')
