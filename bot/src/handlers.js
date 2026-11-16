@@ -1353,6 +1353,27 @@ async function route(interaction, client) {
     }
   } catch (err) {
     console.error('[interaction]', err);
+
+    // Also surface it in the transcript channel so it is visible without SSH.
+    try {
+      if (interaction.guildId) {
+        const rec = await guildRecord(interaction.guildId);
+        const logId = rec.settings.logChannelId;
+        const channel = logId ? await interaction.guild.channels.fetch(logId).catch(() => null) : null;
+        if (channel) {
+          const stack = String(err.stack || err).split('\n').slice(0, 6).join('\n').slice(0, 1000);
+          await channel.send({
+            embeds: [
+              baseEmbed()
+                .setColor(color.danger)
+                .setTitle('Command error')
+                .setDescription(`\`${interaction.commandName || interaction.customId}\` by <@${interaction.user?.id}>`)
+                .addFields({ name: err.message || 'unknown', value: `\`\`\`${stack}\`\`\`` }),
+            ],
+          }).catch(() => {});
+        }
+      }
+    } catch { /* logging must never throw */ }
     const isAdmin = interaction.memberPermissions?.has(PermissionFlagsBits.ManageGuild);
     const detail = isAdmin ? `\n\n\`${err.message || err}\`` : '';
     const message = `Something broke on the bench. The error is in the console — try again, or close and reopen the ticket.${detail}`;
