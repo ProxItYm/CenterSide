@@ -1353,7 +1353,9 @@ async function route(interaction, client) {
     }
   } catch (err) {
     console.error('[interaction]', err);
-    const message = 'Something broke on the bench. The error is in the console — try again, or close and reopen the ticket.';
+    const isAdmin = interaction.memberPermissions?.has(PermissionFlagsBits.ManageGuild);
+    const detail = isAdmin ? `\n\n\`${err.message || err}\`` : '';
+    const message = `Something broke on the bench. The error is in the console — try again, or close and reopen the ticket.${detail}`;
     try {
       if (interaction.deferred || interaction.replied) await interaction.followUp({ content: message, ...EPHEMERAL });
       else await interaction.reply({ content: message, ...EPHEMERAL });
