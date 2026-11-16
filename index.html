@@ -335,6 +335,18 @@
   .free-includes li{display:flex;gap:9px;font-size:13.5px;color:#c6d8ee;align-items:flex-start;line-height:1.45}
   .free-includes li svg{width:15px;height:15px;flex:0 0 auto;margin-top:2px;color:var(--mint)}
 
+  /* ---------- servers ---------- */
+  .srv-grid{display:flex;flex-direction:column;gap:10px;max-width:760px}
+  .srv{display:flex;align-items:center;gap:16px;padding:18px 22px;border-radius:14px;
+       border:1px solid var(--line);background:linear-gradient(165deg,rgba(16,33,65,.7),rgba(9,17,34,.8));
+       transition:border-color .25s ease,transform .2s ease}
+  .srv:hover{border-color:rgba(37,217,255,.45);transform:translateX(3px)}
+  .srv .dot{width:9px;height:9px;border-radius:50%;background:var(--mint);box-shadow:0 0 12px var(--mint);flex:0 0 auto}
+  .srv .meta{display:flex;flex-direction:column;gap:2px}
+  .srv b{font-size:15px;color:#eaf5ff}
+  .srv small{font-size:12.5px;color:var(--muted-2)}
+  .srv .go{margin-left:auto;font-size:12.5px;letter-spacing:.06em;text-transform:uppercase;color:var(--cyan);font-weight:600}
+
   /* ---------- faq ---------- */
   .faq-wrap{max-width:820px}
   .acc{border-bottom:1px solid var(--line)}
@@ -458,6 +470,7 @@
       <a href="#features">Features</a>
       <a href="#how">How it works</a>
       <a href="#commands">Commands</a>
+      <a href="#servers">Servers</a>
       <a href="#free">Free</a>
     </nav>
 
@@ -775,6 +788,30 @@
             <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg> Webhook API &amp; self-hosting</li>
           </ul>
         </div>
+      </div>
+    </div>
+  </section>
+
+
+  <!-- ============ SERVERS ============ -->
+  <section id="servers">
+    <div class="wrap">
+      <div class="sec-head reveal">
+        <div class="kicker">Community</div>
+        <h2>Where CenterSide runs.</h2>
+        <p>Two servers, both open. Come watch the desk work before you put it in yours.</p>
+      </div>
+      <div class="srv-grid reveal">
+        <a class="srv" href="https://discord.gg/UzdCY5pGHQ" target="_blank" rel="noreferrer noopener">
+          <span class="dot"></span>
+          <span class="meta"><b>DAEY | The Daelyrians</b><small>the main community</small></span>
+          <span class="go">join →</span>
+        </a>
+        <a class="srv" href="https://discord.gg/4JY3ssJFjJ" target="_blank" rel="noreferrer noopener">
+          <span class="dot"></span>
+          <span class="meta"><b>CenterSide</b><small>support desk testing ground</small></span>
+          <span class="go">join →</span>
+        </a>
       </div>
     </div>
   </section>
