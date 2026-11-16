@@ -504,6 +504,25 @@ async function ensurePanelForGuild(guild) {
   return { channel, message };
 }
 
+async function handleUpdate(interaction) {
+  await interaction.deferReply({ flags: MessageFlags.Ephemeral });
+
+  try {
+    const { runUpdate } = require('./update');
+    const written = await runUpdate();
+    await interaction.editReply({
+      content: `Updated ${written.length} file(s) from GitHub:\n${written.map((f) => `\`src/${f}\``).join(', ')}\n\nYour settings, saved answers and tickets were not touched. Restarting…`,
+    });
+
+    const shouldRestart = Boolean(process.env.PORT) || String(process.env.AUTO_RESTART || '').toLowerCase() === 'true';
+    if (shouldRestart) setTimeout(() => process.exit(0), 1500);
+    else await interaction.followUp({ content: 'Running locally — restart the bot to load the new code.', flags: MessageFlags.Ephemeral });
+  } catch (err) {
+    console.error('[update]', err);
+    await interaction.editReply({ content: `Update failed: ${err.message}` });
+  }
+}
+
 async function handleJoinCommand(interaction) {
   try { web.start(); } catch (err) { console.warn('[web] start failed:', err.message); }
 
@@ -1326,6 +1345,7 @@ async function route(interaction, client) {
         case 'edit': return await handleEdit(interaction);
         case 'describe': return await handleDescribe(interaction);
         case 'join': return await handleJoinCommand(interaction);
+        case 'update': return await handleUpdate(interaction);
         case 'panel': return await handlePanel(interaction);
         case 'answer': return await handleAnswer(interaction);
         case 'answers': return await handleAnswers(interaction);

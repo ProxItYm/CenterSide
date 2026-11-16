@@ -2,7 +2,7 @@
 
 require('./env');
 
-const { Client, GatewayIntentBits, Partials, Events } = require('discord.js');
+const { Client, GatewayIntentBits, Partials, Events, EmbedBuilder } = require('discord.js');
 
 const config = require('./config');
 const { route, handleTicketMessage, handleMemberJoin, ensurePanelForGuild } = require('./handlers');
@@ -44,6 +44,8 @@ function wire(client, flags) {
         console.error(`[panel] ${guild.name}: ${err.message}`);
       }
     }
+
+    await notifyAdmins(ready).catch((err) => console.error('[notify]', err.message));
 
     const engine = await ai.describeProvider().catch(() => null);
     console.log(`[centerside] reply engine: ${engine || 'built-in conversational agent'}`);
@@ -88,6 +90,41 @@ function wire(client, flags) {
 
 function isDisallowedIntents(err) {
   return Boolean(err) && (err.code === 4014 || /disallowed intents/i.test(err.message || ''));
+}
+
+
+async function notifyAdmins(client) {
+  for (const guild of client.guilds.cache.values()) {
+    try {
+      const record = await guildRecord(guild.id);
+      if (record.settings.notifiedVersion === config.VERSION) continue;
+
+      const owner = await client.users.fetch(guild.ownerId).catch(() => null);
+      if (owner) {
+        await owner.send({
+          embeds: [
+            new EmbedBuilder()
+              .setColor(0x25d9ff)
+              .setTitle(`CenterSide ${config.VERSION} is available`)
+              .setDescription([
+                `Your server **${guild.name}** is running an older build.`,
+                '',
+                'Run **/update** in that server and the bot pulls the latest code itself.',
+                '',
+                'Settings, panels, saved answers and tickets are kept.',
+              ].join('\n'))
+              .setFooter({ text: 'You are getting this because you own the server.' }),
+          ],
+        }).catch(() => {});
+      }
+
+      record.settings.notifiedVersion = config.VERSION;
+      await saveState();
+      console.log(`[notify] ${guild.name}: notice sent`);
+    } catch (err) {
+      console.warn(`[notify] ${guild.name}: ${err.message}`);
+    }
+  }
 }
 
 async function boot() {

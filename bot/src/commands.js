@@ -44,6 +44,11 @@ const commands = [
       .setDescription('Reopen the briefing questions')),
 
   new SlashCommandBuilder()
+    .setName('update')
+    .setDescription('Pull the latest CenterSide code from GitHub — your settings and tickets are kept')
+    .setDefaultMemberPermissions(manage),
+
+  new SlashCommandBuilder()
     .setName('join')
     .setDescription('Get the link that authorises the app and adds you to the server'),
 
