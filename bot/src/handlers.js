@@ -582,7 +582,7 @@ async function handlePanel(interaction) {
     const lanes = lanesFor(record.settings);
 
     // Preferred path: let them edit the lanes first.
-    if (record.settings.describedAt) {
+    {
       try {
         const modal = new ModalBuilder().setCustomId('panel:lanes').setTitle('Ticket options');
         const inputs = [];
@@ -608,6 +608,14 @@ async function handlePanel(interaction) {
       || await interaction.client.channels.fetch(interaction.channelId).catch(() => null);
     if (!channel || !channel.isTextBased()) {
       return reply(interaction, 'I cannot post here. Run `/panel` in a normal text channel.');
+    }
+
+    const perms = channel.permissionsFor(interaction.guild.members.me);
+    const missing = [];
+    if (!perms?.has(PermissionFlagsBits.SendMessages)) missing.push('Send Messages');
+    if (!perms?.has(PermissionFlagsBits.EmbedLinks)) missing.push('Embed Links');
+    if (missing.length) {
+      return reply(interaction, `I cannot post in <#${channel.id}> — I am missing **${missing.join('** and **')}** there. Fix the channel permissions, or run \`/panel\` somewhere else.`);
     }
 
     const sent = await channel.send(panelMessage(lanes));
@@ -1175,6 +1183,16 @@ async function handleTicketMessage(message, pack) {
   const trigger = shouldEscalate(pack, text);
   // "can I report a staff member" is a report, not a hand-off request.
   const wantsHuman = /\b(?:speak|talk|chat)\s+(?:to|with)\s+(?:a\s+)?(?:human|person|someone|staff|mod|admin|agent)\b|\bget\s+me\s+a\s+(?:human|person|staff)\b|\breal\s+person\b|\bhuman\s+(?:please|pls|now)\b/i.test(text);
+  if (!pack.about || pack.about.trim().length < 25) {
+    ticket.autoAnswered = true;
+    await save();
+    console.log(`[auto-answer] #${ticket.number} blocked: server not described`);
+    const note = 'I have not been told what this server is yet, so I am not going to guess at your answer. An admin needs to run `/describe` once — after that I can help properly.';
+    pushHistory(message.channelId, 'assistant', note);
+    await safeReply(message, note);
+    return;
+  }
+
   const provider = await ai.describeProvider();
   let result = null;
 

@@ -99,7 +99,7 @@ async function check(name, fn) {
 
 const pack = {
   server: 'Test Lab',
-  about: 'A test community.',
+  about: 'A test community for support flow testing with a real description.',
   tone: 'Friendly & casual',
   hours: '9am-5pm',
   hardFacts: '',
