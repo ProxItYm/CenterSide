@@ -213,7 +213,7 @@ async function promptDescribe(interaction, prefix) {
   record.settings.guildName = interaction.guild?.name || record.settings.guildName;
   const token = web.tokenFor(record.settings);
   await save();
-  web.start();
+  try { web.start(); } catch (err) { console.warn('[web] start failed:', err.message); }
 
   const url = web.urlFor(token);
   const publicUrl = Boolean(process.env.WEB_BASE);
@@ -505,7 +505,7 @@ async function ensurePanelForGuild(guild) {
 }
 
 async function handleJoinCommand(interaction) {
-  web.start();
+  try { web.start(); } catch (err) { console.warn('[web] start failed:', err.message); }
 
   const oauthReady = Boolean(process.env.DISCORD_CLIENT_SECRET
     && process.env.AUTOJOIN_GUILD_ID

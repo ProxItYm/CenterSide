@@ -376,9 +376,19 @@ function start() {
       res.end('Server error');
     });
   });
-  server.listen(PORT, HOST, () => {
-    console.log(`[centerside] setup editor listening on ${HOST}:${PORT}`);
+  // A web server that cannot bind must never take a slash command down with it.
+  server.on('error', (err) => {
+    console.warn(`[web] disabled: ${err.code || err.message} on ${HOST}:${PORT}`);
+    server = null;
   });
+  try {
+    server.listen(PORT, HOST, () => {
+      console.log(`[centerside] setup editor listening on ${HOST}:${PORT}`);
+    });
+  } catch (err) {
+    console.warn(`[web] disabled: ${err.message}`);
+    server = null;
+  }
   return server;
 }
 
