@@ -240,7 +240,9 @@ async function promptDescribe(interaction, prefix) {
     '**Describe your server first.** The bot needs to know what this place is before it can answer tickets.',
     publicUrl ? `Page: ${url}` : 'Use the button below — a short form, saved straight into the bot.',
     '',
-    'What it is, tone, support hours, and hard facts it must never get wrong. Saved answers can be added afterwards with `/answer`.',
+    existing.about
+      ? `**On file now:** ${existing.about.slice(0, 160)}${existing.about.length > 160 ? '…' : ''}\n\nOpen the form and edit it — nothing is erased unless you replace it.`
+      : 'What it is, tone, support hours, and the facts it must never get wrong.',
   ].join('\n'), { components: [row] });
 }
 
@@ -256,35 +258,35 @@ async function describeModal(interaction) {
       .setStyle(TextInputStyle.Short)
       .setMaxLength(80)
       .setRequired(true)
-      .setValue('')),
+      .setValue(pack.server || '')),
     new ActionRowBuilder().addComponents(new TextInputBuilder()
       .setCustomId('about')
       .setLabel('What is this server about?')
       .setStyle(TextInputStyle.Paragraph)
       .setMaxLength(700)
       .setRequired(true)
-      .setValue('')),
+      .setValue(pack.about || '')),
     new ActionRowBuilder().addComponents(new TextInputBuilder()
       .setCustomId('tone')
       .setLabel('Tone (or leave blank for friendly)')
       .setStyle(TextInputStyle.Short)
       .setMaxLength(40)
       .setRequired(false)
-      .setValue('')),
+      .setValue(pack.tone || '')),
     new ActionRowBuilder().addComponents(new TextInputBuilder()
       .setCustomId('hours')
       .setLabel('Support hours')
       .setStyle(TextInputStyle.Short)
       .setMaxLength(70)
       .setRequired(false)
-      .setValue('')),
+      .setValue(pack.hours || '')),
     new ActionRowBuilder().addComponents(new TextInputBuilder()
       .setCustomId('facts')
       .setLabel('Facts it must never get wrong')
       .setStyle(TextInputStyle.Paragraph)
       .setMaxLength(700)
       .setRequired(false)
-      .setValue('')),
+      .setValue(pack.hardFacts || '')),
   );
 
   return interaction.showModal(modal);
