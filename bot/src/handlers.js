@@ -746,68 +746,6 @@ async function confirmPanel(interaction) {
 /* /answer  /answers                                                   */
 /* ------------------------------------------------------------------ */
 
-async function handleAnswer(interaction) {
-  if (!(await ensureDescribed(interaction))) return;
-  const modal = new ModalBuilder().setCustomId('knowledge:add').setTitle('New saved answer');
-  const question = new TextInputBuilder()
-    .setCustomId('question')
-    .setLabel('Question members ask')
-    .setStyle(TextInputStyle.Short)
-    .setMaxLength(200)
-    .setRequired(true);
-  const answer = new TextInputBuilder()
-    .setCustomId('answer')
-    .setLabel('Answer the bot is allowed to give')
-    .setStyle(TextInputStyle.Paragraph)
-    .setMaxLength(900)
-    .setRequired(true);
-  modal.addComponents(
-    new ActionRowBuilder().addComponents(question),
-    new ActionRowBuilder().addComponents(answer),
-  );
-  return interaction.showModal(modal);
-}
-
-async function handleAnswers(interaction) {
-  if (!(await ensureDescribed(interaction))) return;
-  const removeId = interaction.options.getString('remove');
-
-  if (removeId) {
-    const removed = await updatePack((pack) => removeAnswer(pack, removeId.trim()));
-    return reply(interaction, removed
-      ? `Deleted \`${removeId.trim()}\`.`
-      : `No answer with id \`${removeId.trim()}\` — run \`/answers\` with no options to see the list.`);
-  }
-
-  const pack = await loadPack();
-  if (!pack.answers.length) {
-    return reply(interaction, 'No saved answers yet. Add one with `/answer`.');
-  }
-
-  const lines = pack.answers.map((a) => `\`${a.id}\` — **${a.question}**\n${a.answer.slice(0, 160)}`);
-  const chunks = [];
-  let current = '';
-  for (const line of lines) {
-    if ((current + line).length > 3300) {
-      chunks.push(current);
-      current = '';
-    }
-    current += `${line}\n\n`;
-  }
-  if (current) chunks.push(current);
-
-  await reply(interaction, `Saved answers (${pack.answers.length}):`);
-  for (const chunk of chunks.slice(0, 4)) {
-    await interaction.followUp({ content: chunk.slice(0, 1900), ...EPHEMERAL });
-  }
-  return;
-}
-
-
-/* ------------------------------------------------------------------ */
-/* /welcome                                                            */
-/* ------------------------------------------------------------------ */
-
 async function handleWelcome(interaction) {
   if (!(await ensureDescribed(interaction))) return;
   const record = await guildRecord(interaction.guildId);
@@ -1440,8 +1378,6 @@ async function route(interaction, client) {
         case 'update': return await handleUpdate(interaction);
         case 'notify': return await handleNotify(interaction);
         case 'panel': return await handlePanel(interaction);
-        case 'answer': return await handleAnswer(interaction);
-        case 'answers': return await handleAnswers(interaction);
         case 'welcome': return await handleWelcome(interaction);
         case 'stats': return await handleStats(interaction);
         default: return await reply(interaction, 'Unknown command — the bot may be running an older command set. Re-run `/setup` after the commands refresh.');

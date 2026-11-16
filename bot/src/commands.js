@@ -67,17 +67,6 @@ const commands = [
     .setDefaultMemberPermissions(manage),
 
   new SlashCommandBuilder()
-    .setName('answer')
-    .setDescription('Teach it one question and one approved answer'),
-
-  new SlashCommandBuilder()
-    .setName('answers')
-    .setDescription('List the saved answers, or delete one by id')
-    .addStringOption((option) => option
-      .setName('remove')
-      .setDescription('Id of the answer to delete (leave blank to list them)')),
-
-  new SlashCommandBuilder()
     .setName('welcome')
     .setDescription('Welcome new members with an embed the bot builds for you')
     .setDefaultMemberPermissions(manage)
