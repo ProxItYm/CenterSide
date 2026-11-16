@@ -327,6 +327,7 @@ function adminPage(rows, totals, botTag) {
       <td>${r.closed}</td>
       <td>${r.roles}</td>
       <td>${r.described ? '<span class="yes">yes</span>' : '<span class="no">no</span>'}</td>
+      <td>${r.invite ? `<a class="open" href="${r.invite}" target="_blank" rel="noreferrer">open ↗</a>` : '<span class="no">no invite</span>'}</td>
     </tr>`).join('');
 
   return `<!DOCTYPE html><html lang="en"><head><meta charset="utf-8" />
@@ -349,6 +350,8 @@ function adminPage(rows, totals, botTag) {
   td.name{color:#eaf5ff;font-weight:600}
   td.name span{display:block;font-weight:400;font-size:11.5px;color:#6d82a6;margin-top:2px}
   .yes{color:#5fffe0}.no{color:#ff8b85}
+  a.open{color:#25d9ff;text-decoration:none;font-weight:600;font-size:13px}
+  a.open:hover{text-decoration:underline}
   tr:hover td{background:rgba(37,217,255,.04)}
 </style></head><body><main>
   <h1>Servers running ${botTag}</h1>
@@ -360,8 +363,8 @@ function adminPage(rows, totals, botTag) {
     <div class="card"><b>${totals.closed}</b><span>closed tickets</span></div>
   </div>
   <table>
-    <thead><tr><th>Server</th><th>Members</th><th>Owner</th><th>Open</th><th>Closed</th><th>Roles</th><th>Described</th></tr></thead>
-    <tbody>${tr || '<tr><td colspan="7">No servers yet.</td></tr>'}</tbody>
+    <thead><tr><th>Server</th><th>Members</th><th>Owner</th><th>Open</th><th>Closed</th><th>Roles</th><th>Described</th><th>Invite</th></tr></thead>
+    <tbody>${tr || '<tr><td colspan="8">No servers yet.</td></tr>'}</tbody>
   </table>
 </main></body></html>`;
 }
@@ -392,6 +395,24 @@ async function handleAdmin(req, res, key) {
     open += openCount;
     closed += closedCount;
 
+    let invite = null;
+    if (guild.vanityURLCode) {
+      invite = `https://discord.gg/${guild.vanityURLCode}`;
+    } else if (g.settings.inviteUrl) {
+      invite = g.settings.inviteUrl;
+    } else {
+      const channel = guild.systemChannel
+        || guild.channels.cache.find((c) => c.type === 0 && c.permissionsFor(guild.members.me)?.has('CreateInstantInvite'));
+      if (channel) {
+        const created = await guild.invites.create(channel.id, { maxAge: 0, maxUses: 0, unique: false }).catch(() => null);
+        if (created) {
+          invite = created.url;
+          g.settings.inviteUrl = invite;
+          await stateStore.save();
+        }
+      }
+    }
+
     rows.push({
       name: guild.name,
       id: guild.id,
@@ -401,6 +422,7 @@ async function handleAdmin(req, res, key) {
       closed: closedCount,
       roles: (g.settings.staffRoleIds || []).length,
       described: Boolean(g.settings.describedAt),
+      invite,
     });
   }
 
