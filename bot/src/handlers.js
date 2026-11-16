@@ -856,7 +856,7 @@ async function answerIntake({ channel, ticket, pack, settings, guild, memberName
     text = await ai.complete({
       system: systemPrompt(pack, ticket, settings, serverMap, `This is a new ticket. The member already answered the intake form: "${reason}" (urgency: ${urgency}).`),
       messages: getHistory(channel.id),
-      maxTokens: 220,
+      maxTokens: 180,
     });
     if (text && /^\s*ESCALATE\b/i.test(text.trim())) text = null;
   }
@@ -1146,7 +1146,7 @@ async function handleTicketMessage(message, pack) {
       escalateReason: trigger || 'member asked for a human',
     };
   } else if (provider) {
-    await message.channel.sendTyping().catch(() => {});
+    message.channel.sendTyping().catch(() => {});
     const serverMap = await serverInfo.snapshot(message.guild);
 
     const panelChannel = settings.panelChannelId
@@ -1177,7 +1177,7 @@ async function handleTicketMessage(message, pack) {
     let answer = await ai.complete({
       system: systemPrompt(pack, ticket, settings, serverMap, ticketInfo),
       messages: getHistory(message.channelId),
-      maxTokens: 240,
+      maxTokens: 180,
     });
 
     // A model handing off to a question it can actually answer is worse than a
@@ -1188,7 +1188,7 @@ async function handleTicketMessage(message, pack) {
 
 Do not escalate. The member's question is answerable from the server map and ticket context above. Answer it directly in two sentences, naming the exact channel. If it genuinely is not answerable, ask one clarifying question instead.`,
         messages: getHistory(message.channelId),
-        maxTokens: 240,
+        maxTokens: 180,
       });
       if (retry && !/^\s*ESCALATE\b/i.test(retry.trim())) answer = retry;
     }

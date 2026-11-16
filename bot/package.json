@@ -11,6 +11,7 @@
     "modaltest": "node scripts/modaltest.js",
     "autotest": "node scripts/autotest.js",
     "maptest": "node scripts/maptest.js",
+    "bench": "node scripts/bench.js",
     "test": "npm run selftest && npm run modaltest && npm run autotest",
     "dev": "node --watch src/index.js"
   },

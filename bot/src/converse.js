@@ -12,7 +12,7 @@ const { findAnswer, shouldEscalate } = require('./knowledge');
  * configured, and it still reads like a person working a queue.
  */
 
-const MAX_HISTORY = 12;
+const MAX_HISTORY = 10;
 const history = new Map();
 
 function getHistory(channelId) {
