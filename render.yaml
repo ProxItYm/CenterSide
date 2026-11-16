@@ -1,0 +1,23 @@
+services:
+  - type: worker
+    name: centerside
+    runtime: docker
+    plan: starter
+    autoDeploy: true
+    envVars:
+      - key: DISCORD_TOKEN
+        sync: false
+      - key: CLIENT_ID
+        value: "1571623162263765114"
+      - key: AI_ENABLED
+        value: "true"
+      - key: AI_BASE_URL
+        value: "https://api.groq.com/openai/v1"
+      - key: AI_API_KEY
+        sync: false
+      - key: AI_MODEL
+        value: "openai/gpt-oss-20b"
+    disk:
+      name: centerside-data
+      mountPath: /app/bot/data
+      sizeGB: 1

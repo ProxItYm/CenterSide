@@ -13,7 +13,11 @@ const { loadPack, updatePack } = require('./knowledge');
  * Bound to loopback — nothing is exposed to the internet.
  */
 
-const PORT = Number(process.env.WEB_PORT || 8788);
+// PaaS hosts inject PORT and expect the process to bind on all interfaces.
+const PORT = Number(process.env.PORT || process.env.WEB_PORT || 8788);
+// Loopback locally; a PaaS sets PORT and needs 0.0.0.0 to route to us.
+const HOST = process.env.WEB_HOST || (process.env.PORT ? '0.0.0.0' : '127.0.0.1');
+const DISABLED = String(process.env.WEB_DISABLED || '').toLowerCase() === 'true';
 
 function tokenFor(settings) {
   if (!settings.dashToken) settings.dashToken = crypto.randomBytes(16).toString('hex');
@@ -238,6 +242,7 @@ async function handle(req, res) {
 let server = null;
 
 function start() {
+  if (DISABLED) return null;
   if (server) return server;
   server = http.createServer((req, res) => {
     handle(req, res).catch((err) => {
@@ -246,8 +251,8 @@ function start() {
       res.end('Server error');
     });
   });
-  server.listen(PORT, '127.0.0.1', () => {
-    console.log(`[centerside] setup editor on http://127.0.0.1:${PORT}`);
+  server.listen(PORT, HOST, () => {
+    console.log(`[centerside] setup editor listening on ${HOST}:${PORT}`);
   });
   return server;
 }

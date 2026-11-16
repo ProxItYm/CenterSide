@@ -1,0 +1,8 @@
+node_modules
+bot/node_modules
+bot/data/state.json
+bot/data/transcripts
+bot/.env
+.git
+.github
+*.log
