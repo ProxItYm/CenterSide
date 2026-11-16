@@ -210,6 +210,7 @@ async function ensureLogChannel(guild, settings, category, staffRoleIds) {
  */
 async function promptDescribe(interaction, prefix) {
   const record = await guildRecord(interaction.guildId);
+  const saved = await loadPack();
   record.settings.guildName = interaction.guild?.name || record.settings.guildName;
   const token = web.tokenFor(record.settings);
   await save();
@@ -240,8 +241,8 @@ async function promptDescribe(interaction, prefix) {
     '**Describe your server first.** The bot needs to know what this place is before it can answer tickets.',
     publicUrl ? `Page: ${url}` : 'Use the button below — a short form, saved straight into the bot.',
     '',
-    existing.about
-      ? `**On file now:** ${existing.about.slice(0, 160)}${existing.about.length > 160 ? '…' : ''}\n\nOpen the form and edit it — nothing is erased unless you replace it.`
+    saved.about
+      ? `**On file now:** ${saved.about.slice(0, 160)}${saved.about.length > 160 ? '…' : ''}\n\nOpen the form and edit it — nothing is erased unless you replace it.`
       : 'What it is, tone, support hours, and the facts it must never get wrong.',
   ].join('\n'), { components: [row] });
 }
