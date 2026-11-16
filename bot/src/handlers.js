@@ -76,12 +76,12 @@ function slugify(label) {
   return String(label).toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '').slice(0, 24) || 'lane';
 }
 
-/** Configured ticket lanes, or the four defaults. */
+/** Configured ticket lanes. No invented defaults; one plain fallback lane. */
 function lanesFor(settings) {
   const configured = (settings.lanes || [])
     .filter((lane) => lane && lane.label && lane.value)
     .slice(0, 5);
-  return configured.length ? configured : panelCategories;
+  return configured.length ? configured : [{ label: 'Support', value: 'support' }];
 }
 
 const DEFAULT_INTAKE = [
@@ -256,35 +256,35 @@ async function describeModal(interaction) {
       .setStyle(TextInputStyle.Short)
       .setMaxLength(80)
       .setRequired(true)
-      .setValue(pack.server || interaction.guild?.name || '')),
+      .setValue('')),
     new ActionRowBuilder().addComponents(new TextInputBuilder()
       .setCustomId('about')
       .setLabel('What is this server about?')
       .setStyle(TextInputStyle.Paragraph)
       .setMaxLength(700)
       .setRequired(true)
-      .setValue(pack.about || '')),
+      .setValue('')),
     new ActionRowBuilder().addComponents(new TextInputBuilder()
       .setCustomId('tone')
       .setLabel('Tone (or leave blank for friendly)')
       .setStyle(TextInputStyle.Short)
       .setMaxLength(40)
       .setRequired(false)
-      .setValue(pack.tone || '')),
+      .setValue('')),
     new ActionRowBuilder().addComponents(new TextInputBuilder()
       .setCustomId('hours')
       .setLabel('Support hours')
       .setStyle(TextInputStyle.Short)
       .setMaxLength(70)
       .setRequired(false)
-      .setValue(pack.hours || '')),
+      .setValue('')),
     new ActionRowBuilder().addComponents(new TextInputBuilder()
       .setCustomId('facts')
       .setLabel('Facts it must never get wrong')
       .setStyle(TextInputStyle.Paragraph)
       .setMaxLength(700)
       .setRequired(false)
-      .setValue(pack.hardFacts || '')),
+      .setValue('')),
   );
 
   return interaction.showModal(modal);
@@ -300,11 +300,11 @@ async function saveDescribeModal(interaction) {
   const facts = interaction.fields.getTextInputValue('facts').trim();
 
   await updatePack((pack) => {
-    pack.server = server.slice(0, 80);
+    pack.server = (server || pack.server || '').slice(0, 80);
     pack.about = about.slice(0, 700);
-    pack.tone = tone.slice(0, 40);
-    pack.hours = hours.slice(0, 120);
-    pack.hardFacts = facts.slice(0, 700);
+    pack.tone = (tone || pack.tone || '').slice(0, 40);
+    if (hours) pack.hours = hours.slice(0, 120);
+    if (facts) pack.hardFacts = facts.slice(0, 700);
   });
 
   const record = await guildRecord(interaction.guildId);
@@ -589,11 +589,11 @@ async function handlePanel(interaction) {
         for (let i = 0; i < 5; i += 1) {
           inputs.push(new TextInputBuilder()
             .setCustomId(`lane${i}`)
-            .setLabel(`Option ${i + 1}${i > 2 ? ' (optional)' : ''}`)
+            .setLabel(`Option ${i + 1}`)
             .setStyle(TextInputStyle.Short)
             .setMaxLength(45)
             .setRequired(false)
-            .setValue(lanes[i] ? lanes[i].label : ''));
+            .setValue(''));
         }
         modal.addComponents(...inputs.map((input) => new ActionRowBuilder().addComponents(input)));
         await interaction.showModal(modal);
@@ -610,7 +610,8 @@ async function handlePanel(interaction) {
       return reply(interaction, 'I cannot post here. Run `/panel` in a normal text channel.');
     }
 
-    const perms = channel.permissionsFor(interaction.guild.members.me);
+    const me = interaction.guild.members?.me;
+    const perms = me ? channel.permissionsFor(me) : null;
     const missing = [];
     if (!perms?.has(PermissionFlagsBits.SendMessages)) missing.push('Send Messages');
     if (!perms?.has(PermissionFlagsBits.EmbedLinks)) missing.push('Embed Links');
