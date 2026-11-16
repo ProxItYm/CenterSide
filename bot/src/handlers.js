@@ -556,8 +556,15 @@ async function confirmPanel(interaction) {
 
   const laneList = lanesFor(settings);
 
-  const sent = await interaction.channel.send(panelMessage(laneList));
-  settings.panelChannelId = interaction.channelId;
+  // interaction.channel is null for some modal submissions; resolve it by id.
+  const targetChannel = interaction.channel
+    || await interaction.client.channels.fetch(interaction.channelId).catch(() => null);
+  if (!targetChannel || !targetChannel.isTextBased()) {
+    return interaction.editReply({ content: 'I cannot post here — run `/panel` from a normal text channel.' });
+  }
+
+  const sent = await targetChannel.send(panelMessage(laneList));
+  settings.panelChannelId = targetChannel.id;
   settings.panelMessageId = sent.id;
   await save();
 
