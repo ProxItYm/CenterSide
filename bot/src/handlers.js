@@ -367,7 +367,12 @@ async function handleSetup(interaction) {
 
 /** Saves the question set, then provisions channels + panel. */
 async function confirmSetup(interaction) {
-  await interaction.deferReply({ flags: MessageFlags.Ephemeral });
+  try {
+    await interaction.deferReply({ flags: MessageFlags.Ephemeral });
+  } catch (err) {
+    console.error('[setup] could not acknowledge:', err.message);
+    return;
+  }
 
   const questions = [];
   for (let i = 0; i < 5; i += 1) {
@@ -381,10 +386,24 @@ async function confirmSetup(interaction) {
   await save();
 
   const guild = interaction.guild;
-  const category = await ensureCategory(guild, settings);
-  const log = await ensureLogChannel(guild, settings, category, settings.staffRoleIds || []);
-  await save();
-  const built = await ensurePanelForGuild(guild).catch(() => null);
+  let category = null;
+  let log = null;
+  let built = null;
+
+  try {
+    category = await ensureCategory(guild, settings);
+    log = await ensureLogChannel(guild, settings, category, settings.staffRoleIds || []);
+    await save();
+    built = await ensurePanelForGuild(guild).catch((err) => {
+      console.warn('[setup] panel:', err.message);
+      return null;
+    });
+  } catch (err) {
+    console.error('[setup] channels:', err.message);
+    return interaction.editReply({
+      content: `I saved your questions, but could not create the channels: ${err.message}\nGive me **Manage Channels** and run \`/setup\` again.`,
+    });
+  }
 
   const embed = baseEmbed()
     .setColor(color.ok)
@@ -1046,6 +1065,8 @@ async function handleTicketButton(interaction) {
 }
 
 async function handleModal(interaction) {
+  console.log(`[modal] ${interaction.customId} from ${interaction.user?.username} in ${interaction.guild?.name}`);
+
   if (interaction.customId === 'describe:form') return saveDescribeModal(interaction);
   if (interaction.customId === 'setup:intake') return confirmSetup(interaction);
   if (interaction.customId === 'panel:lanes') return confirmPanel(interaction);
