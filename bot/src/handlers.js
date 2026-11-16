@@ -356,16 +356,22 @@ function settingsEmbed(guild, settings) {
 async function handleSetup(interaction) {
   if (!(await ensureDescribed(interaction))) return;
 
-  const supportRole = interaction.options.getRole('support');
-  if (supportRole) {
-    const record = await guildRecord(interaction.guildId);
-    const set = new Set(record.settings.staffRoleIds || []);
-    set.add(supportRole.id);
-    record.settings.staffRoleIds = [...set];
+  const record = await guildRecord(interaction.guildId);
+  const roles = new Set(record.settings.staffRoleIds || []);
+  const added = [];
+  for (let i = 1; i <= 10; i += 1) {
+    const role = interaction.options.getRole(`support_role_${i}`);
+    if (role && !roles.has(role.id)) {
+      roles.add(role.id);
+      added.push(role.name);
+    }
+  }
+  if (added.length) {
+    record.settings.staffRoleIds = [...roles].slice(0, 10);
     await save();
+    console.log(`[setup] support roles: ${added.join(', ')}`);
   }
 
-  const record = await guildRecord(interaction.guildId);
   const current = intakeQuestions(record.settings);
 
   const modal = new ModalBuilder().setCustomId('setup:intake').setTitle('Ticket questions');

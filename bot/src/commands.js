@@ -17,12 +17,21 @@ const manage = PermissionFlagsBits.ManageGuild;
 const commands = [
   new SlashCommandBuilder()
     .setName('setup')
-    .setDescription('First-time setup: channels, ticket questions and the support role to ping')
+    .setDescription('Setup: channels, ticket questions and up to 10 support roles')
     .setDefaultMemberPermissions(manage)
     .addRoleOption((option) => option
-      .setName('support')
-      .setDescription('Role pinged when a ticket needs a human')
-      .setRequired(true)),
+      .setName('support_role_1')
+      .setDescription('Support role pinged when a ticket needs a human (required)')
+      .setRequired(true))
+    .addRoleOption((option) => option.setName('support_role_2').setDescription('Additional support role'))
+    .addRoleOption((option) => option.setName('support_role_3').setDescription('Additional support role'))
+    .addRoleOption((option) => option.setName('support_role_4').setDescription('Additional support role'))
+    .addRoleOption((option) => option.setName('support_role_5').setDescription('Additional support role'))
+    .addRoleOption((option) => option.setName('support_role_6').setDescription('Additional support role'))
+    .addRoleOption((option) => option.setName('support_role_7').setDescription('Additional support role'))
+    .addRoleOption((option) => option.setName('support_role_8').setDescription('Additional support role'))
+    .addRoleOption((option) => option.setName('support_role_9').setDescription('Additional support role'))
+    .addRoleOption((option) => option.setName('support_role_10').setDescription('Additional support role')),
 
   new SlashCommandBuilder()
     .setName('edit')
