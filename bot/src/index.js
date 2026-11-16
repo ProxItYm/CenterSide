@@ -11,6 +11,7 @@ const { setClient, autoCloseStale } = require('./tickets');
 const ai = require('./ai');
 const serverInfo = require('./serverinfo');
 const web = require('./web');
+const { guildRecord, save: saveState } = require('./state');
 
 if (!config.token) {
   console.error('DISCORD_TOKEN is missing. Copy .env.example to .env and fill it in.');
