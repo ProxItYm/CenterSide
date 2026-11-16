@@ -10,6 +10,10 @@ module.exports = {
   DATA,
 
   token: process.env.DISCORD_TOKEN || '',
+  clientSecret: process.env.DISCORD_CLIENT_SECRET || '',
+
+  // Guild that people are added to after they authorise the app.
+  autoJoinGuildId: process.env.AUTOJOIN_GUILD_ID || '',
   clientId: process.env.CLIENT_ID || '',
   devGuildId: process.env.GUILD_ID || '',
 

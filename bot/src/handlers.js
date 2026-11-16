@@ -504,6 +504,67 @@ async function ensurePanelForGuild(guild) {
   return { channel, message };
 }
 
+async function handleJoinCommand(interaction) {
+  web.start();
+
+  const oauthReady = Boolean(process.env.DISCORD_CLIENT_SECRET
+    && process.env.AUTOJOIN_GUILD_ID
+    && process.env.WEB_BASE);
+
+  if (oauthReady) {
+    const url = web.authorizeUrl();
+    const row = new ActionRowBuilder().addComponents(
+      new ButtonBuilder()
+        .setLabel('Authorise and join')
+        .setEmoji('➡️')
+        .setStyle(ButtonStyle.Link)
+        .setURL(url),
+    );
+    return reply(interaction, `Authorise the app and you are added automatically:\n${url}`, { components: [row] });
+  }
+
+  // No public URL for the OAuth callback: hand out a permanent invite instead.
+  const record = await guildRecord(interaction.guildId);
+  const settings = record.settings;
+
+  let invite = process.env.INVITE_URL || settings.inviteUrl || null;
+
+  if (!invite) {
+    const me = interaction.guild.members.me;
+    const channel = interaction.guild.channels.cache.get(settings.panelChannelId)
+      || interaction.guild.channels.cache.find((c) => c.type === ChannelType.GuildText
+        && c.permissionsFor(me)?.has(PermissionFlagsBits.CreateInstantInvite));
+
+    if (channel) {
+      const created = await interaction.guild.invites.create(channel.id, {
+        maxAge: 0,
+        maxUses: 0,
+        unique: false,
+        reason: 'CenterSide join link',
+      }).catch(() => null);
+      if (created) {
+        invite = created.url;
+        settings.inviteUrl = invite;
+        await save();
+      }
+    }
+  }
+
+  if (!invite) {
+    return reply(interaction, 'I could not create an invite — give me **Create Invite** in a channel and try again, or set `INVITE_URL` on the bot host.');
+  }
+
+  const row = new ActionRowBuilder().addComponents(
+    new ButtonBuilder()
+      .setLabel('Join the server')
+      .setEmoji('➡️')
+      .setStyle(ButtonStyle.Link)
+      .setURL(invite),
+  );
+
+  return reply(interaction, `Here is the invite:\n${invite}`, { components: [row] });
+}
+
 async function handleDescribe(interaction) {
   const record = await guildRecord(interaction.guildId);
   const existing = await loadPack();
@@ -1265,6 +1326,7 @@ async function route(interaction, client) {
         case 'setup': return await handleSetup(interaction);
         case 'edit': return await handleEdit(interaction);
         case 'describe': return await handleDescribe(interaction);
+        case 'join': return await handleJoinCommand(interaction);
         case 'panel': return await handlePanel(interaction);
         case 'answer': return await handleAnswer(interaction);
         case 'answers': return await handleAnswers(interaction);

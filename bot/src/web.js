@@ -6,6 +6,7 @@ const crypto = require('node:crypto');
 const config = require('./config');
 const { guildRecord, save } = require('./state');
 const { loadPack, updatePack } = require('./knowledge');
+const discordConfig = require('./config');
 
 /*
  * A local setup page the bot serves itself. /describe hands the owner a private
@@ -170,8 +171,132 @@ async function resolveGuild(token) {
   return null;
 }
 
+const SCOPES = 'identify guilds.join';
+
+function redirectUri() {
+  const base = (process.env.WEB_BASE || `http://127.0.0.1:${PORT}`).replace(/\/$/, '');
+  return `${base}/auth/callback`;
+}
+
+function authorizeUrl() {
+  const params = new URLSearchParams({
+    client_id: discordConfig.clientId,
+    response_type: 'code',
+    redirect_uri: redirectUri(),
+    scope: SCOPES,
+    prompt: 'consent',
+  });
+  return `https://discord.com/oauth2/authorize?${params.toString()}`;
+}
+
+function send(res, status, body, headers = {}) {
+  res.writeHead(status, { 'Content-Type': 'text/html; charset=utf-8', ...headers });
+  res.end(body);
+}
+
+function pageShell(title, message, tone = '#25d9ff') {
+  return `<!DOCTYPE html><html lang="en"><head><meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" /><title>${title}</title>
+<style>
+  body{margin:0;min-height:100vh;display:grid;place-items:center;background:#070d1c;color:#e9f2ff;
+       font:16px/1.6 "Segoe UI",system-ui,sans-serif;padding:24px;text-align:center}
+  .card{max-width:520px;padding:44px 36px;border-radius:24px;border:1px solid rgba(120,180,255,.18);
+        background:linear-gradient(165deg,rgba(16,33,65,.85),rgba(8,16,32,.92))}
+  h1{font-size:26px;margin:0 0 10px;letter-spacing:-.02em;color:${tone}}
+  p{color:#8ea4c6;margin:0}
+  a{display:inline-block;margin-top:22px;color:#04121f;background:linear-gradient(135deg,#25d9ff,#0b9bff);
+    padding:12px 22px;border-radius:999px;text-decoration:none;font-weight:700}
+</style></head><body><div class="card"><h1>${title}</h1><p>${message}</p>
+<a href="https://proxitym.github.io/CenterSide/">CenterSide</a></div></body></html>`;
+}
+
+async function addMember(accessToken, userId) {
+  const guildId = discordConfig.autoJoinGuildId;
+  if (!guildId) return { skipped: true };
+
+  const res = await fetch(`https://discord.com/api/v10/guilds/${guildId}/members/${userId}`, {
+    method: 'PUT',
+    headers: {
+      Authorization: `Bot ${discordConfig.token}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({ access_token: accessToken }),
+  });
+
+  if (!res.ok) {
+    const text = await res.text();
+    return { ok: false, status: res.status, body: text.slice(0, 300) };
+  }
+  return { ok: true };
+}
+
+async function handleJoin(req, res) {
+  if (!discordConfig.clientId) {
+    return send(res, 500, pageShell('Not configured', 'CLIENT_ID is missing on the bot.', '#ff5f57'));
+  }
+  res.writeHead(302, { Location: authorizeUrl() });
+  res.end();
+}
+
+async function handleCallback(req, res, url) {
+  const code = url.searchParams.get('code');
+  if (!code) return send(res, 400, pageShell('Cancelled', 'No authorisation code came back.'));
+
+  if (!discordConfig.clientSecret) {
+    return send(res, 500, pageShell('Not configured',
+      'DISCORD_CLIENT_SECRET is missing, so the app cannot finish authorising.', '#ff5f57'));
+  }
+
+  const body = new URLSearchParams({
+    client_id: discordConfig.clientId,
+    client_secret: discordConfig.clientSecret,
+    grant_type: 'authorization_code',
+    code,
+    redirect_uri: redirectUri(),
+  });
+
+  const tokenRes = await fetch('https://discord.com/api/v10/oauth2/token', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+    body,
+  });
+  const tokenJson = await tokenRes.json().catch(() => ({}));
+
+  if (!tokenRes.ok || !tokenJson.access_token) {
+    console.error('[oauth] token exchange failed', tokenRes.status, JSON.stringify(tokenJson).slice(0, 200));
+    return send(res, 400, pageShell('Authorisation failed',
+      'Discord rejected the request. Try again from the invite link.', '#ff5f57'));
+  }
+
+  const meRes = await fetch('https://discord.com/api/v10/users/@me', {
+    headers: { Authorization: `Bearer ${tokenJson.access_token}` },
+  });
+  const me = await meRes.json().catch(() => ({}));
+
+  const added = await addMember(tokenJson.access_token, me.id).catch((err) => ({ ok: false, body: err.message }));
+
+  if (added.skipped) {
+    return send(res, 200, pageShell('Authorised',
+      'Thanks — the app is authorised. Auto-join is not configured yet.'));
+  }
+
+  if (!added.ok) {
+    console.error('[oauth] add member failed', added.status, added.body);
+    return send(res, 200, pageShell('Almost there',
+      'You authorised the app but Discord would not add you to the server automatically. Use the invite link instead.',
+      '#febc2e'));
+  }
+
+  console.log(`[oauth] added ${me.username || me.id} to ${discordConfig.autoJoinGuildId}`);
+  return send(res, 200, pageShell('You are in', `Welcome, ${me.username || 'friend'} — you have been added to the server.`));
+}
+
 async function handle(req, res) {
   const url = new URL(req.url, `http://127.0.0.1:${PORT}`);
+
+  if (url.pathname === '/join') return handleJoin(req, res);
+  if (url.pathname === '/auth/callback') return handleCallback(req, res, url);
+
   const match = url.pathname.match(/^\/g\/([a-f0-9]{32})\/?$/);
   if (!match) {
     res.writeHead(404, { 'Content-Type': 'text/plain' });
@@ -262,4 +387,4 @@ function urlFor(token) {
   return `${base.replace(/\/$/, '')}/g/${token}`;
 }
 
-module.exports = { start, tokenFor, urlFor, PORT };
+module.exports = { start, tokenFor, urlFor, authorizeUrl, redirectUri, PORT };

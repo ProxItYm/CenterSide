@@ -44,6 +44,10 @@ const commands = [
       .setDescription('Reopen the briefing questions')),
 
   new SlashCommandBuilder()
+    .setName('join')
+    .setDescription('Get the link that authorises the app and adds you to the server'),
+
+  new SlashCommandBuilder()
     .setName('describe')
     .setDescription('Open the setup page and write a proper description of your server')
     .setDefaultMemberPermissions(manage),
