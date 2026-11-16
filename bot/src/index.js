@@ -36,6 +36,8 @@ function wire(client, flags) {
     }
 
     web.start();
+    web.attachClient(client);
+    console.log(`[centerside] servers dashboard: http://127.0.0.1:8788/admin/${web.adminKey()}`);
 
     for (const guild of ready.guilds.cache.values()) {
       try {

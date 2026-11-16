@@ -6,6 +6,9 @@ const crypto = require('node:crypto');
 const config = require('./config');
 const { guildRecord, save } = require('./state');
 const { loadPack, updatePack } = require('./knowledge');
+const { DATA } = require('./config');
+const fsSync = require('node:fs');
+const path = require('node:path');
 const discordConfig = require('./config');
 
 /*
@@ -291,8 +294,127 @@ async function handleCallback(req, res, url) {
   return send(res, 200, pageShell('You are in', `Welcome, ${me.username || 'friend'} — you have been added to the server.`));
 }
 
+
+/* ------------------------------------------------------------------ */
+/* owner dashboard: every server the bot is in                         */
+/* ------------------------------------------------------------------ */
+
+let clientRef = null;
+
+function attachClient(client) {
+  clientRef = client;
+}
+
+function adminKey() {
+  const file = path.join(DATA, 'admin.key');
+  try {
+    return fsSync.readFileSync(file, 'utf8').trim();
+  } catch {
+    const key = crypto.randomBytes(16).toString('hex');
+    fsSync.mkdirSync(DATA, { recursive: true });
+    fsSync.writeFileSync(file, key, 'utf8');
+    return key;
+  }
+}
+
+function adminPage(rows, totals, botTag) {
+  const tr = rows.map((r) => `
+    <tr>
+      <td class="name">${r.name}<span>${r.id}</span></td>
+      <td>${r.members}</td>
+      <td>${r.owner}</td>
+      <td>${r.open}</td>
+      <td>${r.closed}</td>
+      <td>${r.roles}</td>
+      <td>${r.described ? '<span class="yes">yes</span>' : '<span class="no">no</span>'}</td>
+    </tr>`).join('');
+
+  return `<!DOCTYPE html><html lang="en"><head><meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>CenterSide — servers</title>
+<style>
+  :root{color-scheme:dark}
+  body{margin:0;background:#070d1c;color:#e9f2ff;font:15px/1.55 "Segoe UI",system-ui,sans-serif}
+  main{max-width:1000px;margin:0 auto;padding:48px 20px 80px}
+  h1{font-size:26px;margin:0 0 4px;letter-spacing:-.02em}
+  .sub{color:#8ea4c6;margin:0 0 28px;font-size:13.5px}
+  .cards{display:flex;gap:12px;flex-wrap:wrap;margin-bottom:26px}
+  .card{flex:1;min-width:140px;padding:16px 18px;border-radius:14px;border:1px solid rgba(120,180,255,.16);
+        background:linear-gradient(165deg,rgba(16,33,65,.8),rgba(8,16,32,.9))}
+  .card b{display:block;font-size:26px;letter-spacing:-.02em}
+  .card span{font-size:11.5px;letter-spacing:.12em;text-transform:uppercase;color:#6d82a6}
+  table{width:100%;border-collapse:collapse;border:1px solid rgba(120,180,255,.14);border-radius:12px;overflow:hidden}
+  th{font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:#6d82a6;text-align:left;padding:12px 14px;background:rgba(255,255,255,.03)}
+  td{padding:14px;border-top:1px solid rgba(120,180,255,.08);font-size:14px;color:#c6d8ee}
+  td.name{color:#eaf5ff;font-weight:600}
+  td.name span{display:block;font-weight:400;font-size:11.5px;color:#6d82a6;margin-top:2px}
+  .yes{color:#5fffe0}.no{color:#ff8b85}
+  tr:hover td{background:rgba(37,217,255,.04)}
+</style></head><body><main>
+  <h1>Servers running ${botTag}</h1>
+  <p class="sub">Live view from the bot process. Bookmark this page.</p>
+  <div class="cards">
+    <div class="card"><b>${totals.servers}</b><span>servers</span></div>
+    <div class="card"><b>${totals.members}</b><span>members reached</span></div>
+    <div class="card"><b>${totals.open}</b><span>open tickets</span></div>
+    <div class="card"><b>${totals.closed}</b><span>closed tickets</span></div>
+  </div>
+  <table>
+    <thead><tr><th>Server</th><th>Members</th><th>Owner</th><th>Open</th><th>Closed</th><th>Roles</th><th>Described</th></tr></thead>
+    <tbody>${tr || '<tr><td colspan="7">No servers yet.</td></tr>'}</tbody>
+  </table>
+</main></body></html>`;
+}
+
+async function handleAdmin(req, res, key) {
+  if (key !== adminKey()) {
+    return send(res, 403, pageShell('Not allowed', 'Wrong dashboard key.', '#ff5f57'));
+  }
+  if (!clientRef) {
+    return send(res, 503, pageShell('Starting up', 'The bot is not connected yet — refresh in a moment.', '#febc2e'));
+  }
+
+  const { stateStore } = require('./state');
+  const state = await stateStore.load();
+
+  const rows = [];
+  let members = 0;
+  let open = 0;
+  let closed = 0;
+
+  for (const guild of clientRef.guilds.cache.values()) {
+    const g = state.guilds?.[guild.id] || { settings: {}, tickets: {}, history: [] };
+    const openCount = Object.keys(g.tickets || {}).length;
+    const closedCount = (g.history || []).length;
+    const owner = await clientRef.users.fetch(guild.ownerId).catch(() => null);
+
+    members += guild.memberCount;
+    open += openCount;
+    closed += closedCount;
+
+    rows.push({
+      name: guild.name,
+      id: guild.id,
+      members: guild.memberCount,
+      owner: owner ? owner.username : guild.ownerId,
+      open: openCount,
+      closed: closedCount,
+      roles: (g.settings.staffRoleIds || []).length,
+      described: Boolean(g.settings.describedAt),
+    });
+  }
+
+  rows.sort((a, b) => b.members - a.members);
+
+  res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' });
+  res.end(adminPage(rows, { servers: rows.length, members, open, closed }, clientRef.user.tag));
+}
+
 async function handle(req, res) {
   const url = new URL(req.url, `http://127.0.0.1:${PORT}`);
+
+  const adminMatch = url.pathname.match(/^\/admin\/([a-f0-9]{32})\/?$/);
+  if (adminMatch) return handleAdmin(req, res, adminMatch[1]);
 
   if (url.pathname === '/join') return handleJoin(req, res);
   if (url.pathname === '/auth/callback') return handleCallback(req, res, url);
@@ -397,4 +519,4 @@ function urlFor(token) {
   return `${base.replace(/\/$/, '')}/g/${token}`;
 }
 
-module.exports = { start, tokenFor, urlFor, authorizeUrl, redirectUri, PORT };
+module.exports = { start, tokenFor, urlFor, authorizeUrl, redirectUri, attachClient, adminKey, PORT };
