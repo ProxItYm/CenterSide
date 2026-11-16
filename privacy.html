@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Privacy — CenterSide</title>
+<meta name="description" content="What CenterSide stores, where it goes, and how to have it deleted." />
+<style>
+  :root{color-scheme:dark}
+  *{box-sizing:border-box}
+  body{margin:0;background:#070d1c;color:#e9f2ff;font:16px/1.7 "Inter",system-ui,-apple-system,"Segoe UI",sans-serif;
+       background-image:radial-gradient(900px 500px at 80% -10%, rgba(37,217,255,.14), transparent 60%)}
+  main{max-width:760px;margin:0 auto;padding:56px 24px 96px}
+  a{color:#8bf0ff;text-decoration:none}
+  a:hover{text-decoration:underline}
+  .back{display:inline-flex;align-items:center;gap:8px;font-size:13px;color:#8ea4c6;margin-bottom:32px}
+  h1{font-family:"Space Grotesk",system-ui,sans-serif;font-size:clamp(1.9rem,4vw,2.6rem);letter-spacing:-.03em;margin:0 0 10px}
+  .lede{color:#8ea4c6;margin:0 0 36px}
+  h2{font-family:"Space Grotesk",system-ui,sans-serif;font-size:17px;letter-spacing:-.01em;margin:34px 0 8px}
+  p,li{color:#c2d5ee;font-size:14.5px}
+  ul{padding-left:20px}
+  li{margin-bottom:6px}
+  code{font-family:ui-monospace,Menlo,monospace;font-size:12.5px;color:#8bf0ff;background:rgba(37,217,255,.08);
+       border:1px solid rgba(37,217,255,.2);padding:1px 5px;border-radius:5px}
+  .note{margin-top:40px;padding:16px 18px;border-radius:12px;border:1px solid rgba(120,180,255,.16);
+        background:rgba(255,255,255,.02);font-size:13px;color:#8ea4c6}
+</style>
+</head>
+<body>
+<main>
+  <a class="back" href="./">← Back to CenterSide</a>
+  <h1>Privacy</h1>
+  <p class="lede">Short version: the bot stores what it needs to answer tickets, keeps it on the server that runs it, and sends reply text through the AI provider. Nothing is sold, and nothing is used for advertising.</p>
+
+  <h2>What is stored</h2>
+  <ul>
+    <li><strong>Server briefing</strong> — the description, tone, hours and facts you submit with <code>/describe</code>, plus the answers you add with <code>/answer</code>.</li>
+    <li><strong>Ticket records</strong> — ticket number, lane, opener id, who claimed it, timestamps, the answers a member gives on the intake form, and internal staff notes.</li>
+    <li><strong>Transcripts</strong> — the messages in a ticket channel, saved as a text file when the ticket closes and sent to your transcript channel and the opener's DMs.</li>
+    <li><strong>Settings</strong> — channel ids, role ids and toggles needed to run the desk.</li>
+  </ul>
+
+  <h2>What is not stored</h2>
+  <ul>
+    <li>No passwords, tokens, payment details or email addresses are collected by the bot.</li>
+    <li>No analytics, tracking pixels or advertising identifiers.</li>
+    <li>Messages outside ticket channels are ignored and never written anywhere.</li>
+  </ul>
+
+  <h2>Where replies are generated</h2>
+  <p>When a ticket message needs an answer, the ticket conversation (up to the last few messages) and your server briefing are sent to the configured language-model API — by default Groq — to write the reply. That provider processes the text under its own terms. If no provider is configured, replies are generated locally by the bot's built-in engine, and nothing leaves the host.</p>
+
+  <h2>Retention and deletion</h2>
+  <ul>
+    <li>Ticket records and transcripts live in the bot's local data directory on the machine that hosts it.</li>
+    <li>Closing a ticket archives it; deleting the transcript files and the ticket entry removes it permanently.</li>
+    <li>For a server-wide wipe, remove the bot from the server and ask the operator (contact below) to delete that guild's record and transcripts. Requests are honoured within 30 days.</li>
+  </ul>
+
+  <h2>Children</h2>
+  <p>CenterSide is not directed at anyone under the minimum age required by Discord's Terms of Service, and no such data is knowingly collected.</p>
+
+  <h2>Changes</h2>
+  <p>If this policy changes, the updated version is posted at this URL. Continued use after a change means you accept it.</p>
+
+  <div class="note">Questions, or want a guild's data removed? Contact the operator in the CenterSide support server linked from the homepage.</div>
+</main>
+</body>
+</html>
