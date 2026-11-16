@@ -141,6 +141,17 @@ async function safeReply(message, content) {
   }
 }
 
+async function safeDefer(interaction, options = { flags: MessageFlags.Ephemeral }) {
+  if (interaction.deferred || interaction.replied) return false;
+  try {
+    await interaction.deferReply(options);
+    return true;
+  } catch (err) {
+    console.warn(`[interaction] defer failed: ${err.code || err.message}`);
+    return false;
+  }
+}
+
 async function reply(interaction, content, extra = {}) {
   if (interaction.deferred || interaction.replied) {
     return interaction.followUp({ content, ...EPHEMERAL, ...extra });
@@ -301,7 +312,7 @@ async function describeModal(interaction) {
 }
 
 async function saveDescribeModal(interaction) {
-  await interaction.deferReply({ flags: MessageFlags.Ephemeral });
+  if (!(await safeDefer(interaction))) return;
 
   const server = interaction.fields.getTextInputValue('server').trim();
   const about = interaction.fields.getTextInputValue('about').trim();
@@ -392,12 +403,7 @@ async function handleSetup(interaction) {
 
 /** Saves the question set, then provisions channels + panel. */
 async function confirmSetup(interaction) {
-  try {
-    await interaction.deferReply({ flags: MessageFlags.Ephemeral });
-  } catch (err) {
-    console.error('[setup] could not acknowledge:', err.message);
-    return;
-  }
+  if (!(await safeDefer(interaction))) return;
 
   const questions = [];
   for (let i = 0; i < 5; i += 1) {
@@ -555,7 +561,7 @@ async function handleNotify(interaction) {
     return reply(interaction, 'Only the bot owner can send update notices.');
   }
 
-  await interaction.deferReply({ flags: MessageFlags.Ephemeral });
+  if (!(await safeDefer(interaction))) return;
 
   const version = require('./config').VERSION;
   let sent = 0;
@@ -593,7 +599,7 @@ async function handleNotify(interaction) {
 }
 
 async function handleUpdate(interaction) {
-  await interaction.deferReply({ flags: MessageFlags.Ephemeral });
+  if (!(await safeDefer(interaction))) return;
 
   try {
     const { runUpdate } = require('./update');
@@ -739,7 +745,7 @@ async function handlePanel(interaction) {
 }
 
 async function confirmPanel(interaction) {
-  await interaction.deferReply({ flags: MessageFlags.Ephemeral });
+  if (!(await safeDefer(interaction))) return;
 
   const labels = [];
   for (let i = 0; i < 5; i += 1) {
@@ -1470,9 +1476,16 @@ async function route(interaction, client) {
     const detail = isAdmin ? `\n\n\`${err.message || err}\`` : '';
     const message = `Something broke on the bench. The error is in the console — try again, or close and reopen the ticket.${detail}`;
     try {
-      if (interaction.deferred || interaction.replied) await interaction.followUp({ content: message, ...EPHEMERAL });
-      else await interaction.reply({ content: message, ...EPHEMERAL });
-    } catch { /* interaction already gone */ }
+      if (interaction.deferred || interaction.replied) {
+        await interaction.followUp({ content: message, ...EPHEMERAL });
+      } else if (!interaction.isRepliable || interaction.isRepliable()) {
+        await interaction.reply({ content: message, ...EPHEMERAL });
+      }
+    } catch (replyError) {
+      if (replyError.code !== 10062 && replyError.code !== 40060) {
+        console.warn('[interaction] could not reply:', replyError.code || replyError.message);
+      }
+    }
   }
 }
 
