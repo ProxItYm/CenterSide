@@ -31,6 +31,16 @@ npx serve .
 It includes a live knowledge-pack editor that builds the same reply shape the bot uses, so what you
 see on the site is what the bot says in a ticket.
 
+## Publishing
+
+Public listing needs two URLs, both live on GitHub Pages:
+
+- Privacy: https://proxitym.github.io/CenterSide/privacy.html
+- Terms: https://proxitym.github.io/CenterSide/terms.html
+
+Register commands globally with `npm run deploy` (leave `GUILD_ID` blank); it also clears any
+per-guild copies so servers do not see duplicates.
+
 ## Bot requirements
 
 - Node.js 18.17 or newer
