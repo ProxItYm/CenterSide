@@ -46,8 +46,6 @@ function wire(client, flags) {
       }
     }
 
-    await notifyAdmins(ready).catch((err) => console.error('[notify]', err.message));
-
     const engine = await ai.describeProvider().catch(() => null);
     console.log(`[centerside] reply engine: ${engine || 'built-in conversational agent'}`);
 

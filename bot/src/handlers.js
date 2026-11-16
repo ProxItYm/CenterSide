@@ -504,6 +504,50 @@ async function ensurePanelForGuild(guild) {
   return { channel, message };
 }
 
+async function handleNotify(interaction) {
+  const app = await interaction.client.application?.fetch().catch(() => null);
+  const ownerId = app?.owner?.id;
+  if (!ownerId || interaction.user.id !== ownerId) {
+    return reply(interaction, 'Only the bot owner can send update notices.');
+  }
+
+  await interaction.deferReply({ flags: MessageFlags.Ephemeral });
+
+  const version = require('./config').VERSION;
+  let sent = 0;
+  let failed = 0;
+
+  for (const guild of interaction.client.guilds.cache.values()) {
+    try {
+      const record = await guildRecord(guild.id);
+      const owner = await interaction.client.users.fetch(guild.ownerId).catch(() => null);
+      if (!owner) { failed += 1; continue; }
+
+      await owner.send({
+        embeds: [
+          baseEmbed()
+            .setTitle(`CenterSide ${version} is available`)
+            .setDescription([
+              `Your server **${guild.name}** is running an older build.`,
+              '',
+              'Run **/update** in that server and the bot pulls the latest code itself.',
+              '',
+              'Settings, panels, saved answers and tickets are kept.',
+            ].join('\n')),
+        ],
+      }).catch(() => { failed += 1; });
+
+      record.settings.notifiedVersion = version;
+      sent += 1;
+    } catch {
+      failed += 1;
+    }
+  }
+
+  await save();
+  return interaction.editReply({ content: `Notified ${sent} server owner(s) about ${version}${failed ? `, ${failed} could not be reached` : ''}.` });
+}
+
 async function handleUpdate(interaction) {
   await interaction.deferReply({ flags: MessageFlags.Ephemeral });
 
@@ -648,6 +692,54 @@ async function handlePanel(interaction) {
     console.error('[panel]', err);
     return reply(interaction, `Panel failed: ${err.message}`);
   }
+}
+
+async function confirmPanel(interaction) {
+  await interaction.deferReply({ flags: MessageFlags.Ephemeral });
+
+  const labels = [];
+  for (let i = 0; i < 5; i += 1) {
+    const value = interaction.fields.getTextInputValue(`lane${i}`).trim();
+    if (value) labels.push(value.slice(0, 45));
+  }
+
+  const record = await guildRecord(interaction.guildId);
+  const settings = record.settings;
+
+  settings.lanes = labels.map((label) => ({
+    label,
+    value: slugify(label),
+    description: '',
+  }));
+
+  const lanes = lanesFor(settings);
+  const channel = interaction.channel
+    || await interaction.client.channels.fetch(interaction.channelId).catch(() => null);
+
+  if (!channel || !channel.isTextBased()) {
+    return interaction.editReply({ content: 'I cannot post here — run `/panel` in a normal text channel.' });
+  }
+
+  const me = interaction.guild.members?.me;
+  const perms = me ? channel.permissionsFor(me) : null;
+  if (perms && (!perms.has(PermissionFlagsBits.SendMessages) || !perms.has(PermissionFlagsBits.EmbedLinks))) {
+    return interaction.editReply({ content: `I cannot post in <#${channel.id}> — I need **Send Messages** and **Embed Links** there.` });
+  }
+
+  const sent = await channel.send(panelMessage(lanes));
+  settings.panelChannelId = channel.id;
+  settings.panelMessageId = sent.id;
+  await save();
+
+  return interaction.editReply({
+    content: [
+      `Panel posted in <#${channel.id}>.`,
+      '',
+      `Options: ${lanes.map((l) => `**${l.label}**`).join(', ')}`,
+      '',
+      'Run `/panel` again anywhere to change them.',
+    ].join('\n'),
+  });
 }
 
 /* ------------------------------------------------------------------ */
@@ -1346,6 +1438,7 @@ async function route(interaction, client) {
         case 'describe': return await handleDescribe(interaction);
         case 'join': return await handleJoinCommand(interaction);
         case 'update': return await handleUpdate(interaction);
+        case 'notify': return await handleNotify(interaction);
         case 'panel': return await handlePanel(interaction);
         case 'answer': return await handleAnswer(interaction);
         case 'answers': return await handleAnswers(interaction);

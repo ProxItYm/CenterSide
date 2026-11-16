@@ -49,6 +49,10 @@ const commands = [
     .setDefaultMemberPermissions(manage),
 
   new SlashCommandBuilder()
+    .setName('notify')
+    .setDescription('Send the update notice to every server owner (bot owner only)'),
+
+  new SlashCommandBuilder()
     .setName('join')
     .setDescription('Get the link that authorises the app and adds you to the server'),
 
