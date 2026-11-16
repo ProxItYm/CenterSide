@@ -577,69 +577,49 @@ async function handleDescribe(interaction) {
 }
 
 async function handlePanel(interaction) {
-  if (!(await ensureDescribed(interaction))) return;
+  try {
+    const record = await guildRecord(interaction.guildId);
+    const lanes = lanesFor(record.settings);
 
-  const record = await guildRecord(interaction.guildId);
-  const current = lanesFor(record.settings);
+    // Preferred path: let them edit the lanes first.
+    if (record.settings.describedAt) {
+      try {
+        const modal = new ModalBuilder().setCustomId('panel:lanes').setTitle('Ticket options');
+        const inputs = [];
+        for (let i = 0; i < 5; i += 1) {
+          inputs.push(new TextInputBuilder()
+            .setCustomId(`lane${i}`)
+            .setLabel(`Option ${i + 1}${i > 2 ? ' (optional)' : ''}`)
+            .setStyle(TextInputStyle.Short)
+            .setMaxLength(45)
+            .setRequired(false)
+            .setValue(lanes[i] ? lanes[i].label : ''));
+        }
+        modal.addComponents(...inputs.map((input) => new ActionRowBuilder().addComponents(input)));
+        await interaction.showModal(modal);
+        return;
+      } catch (modalError) {
+        console.error('[panel] modal failed, posting panel directly:', modalError.message);
+      }
+    }
 
-  const modal = new ModalBuilder().setCustomId('panel:lanes').setTitle('Ticket options');
-  const inputs = [];
-  for (let i = 0; i < 5; i += 1) {
-    inputs.push(new TextInputBuilder()
-      .setCustomId(`lane${i}`)
-      .setLabel(`Option ${i + 1}${i > 2 ? ' (optional)' : ''}`)
-      .setStyle(TextInputStyle.Short)
-      .setMaxLength(45)
-      .setRequired(false)
-      .setValue(current[i] ? current[i].label : ''));
+    // Fallback: post the panel with the lanes we already have.
+    const channel = interaction.channel
+      || await interaction.client.channels.fetch(interaction.channelId).catch(() => null);
+    if (!channel || !channel.isTextBased()) {
+      return reply(interaction, 'I cannot post here. Run `/panel` in a normal text channel.');
+    }
+
+    const sent = await channel.send(panelMessage(lanes));
+    record.settings.panelChannelId = channel.id;
+    record.settings.panelMessageId = sent.id;
+    await save();
+
+    return reply(interaction, `Panel posted in <#${channel.id}>. Options: ${lanes.map((l) => l.label).join(', ') || 'defaults'}.`);
+  } catch (err) {
+    console.error('[panel]', err);
+    return reply(interaction, `Panel failed: ${err.message}`);
   }
-  modal.addComponents(...inputs.map((input) => new ActionRowBuilder().addComponents(input)));
-  return interaction.showModal(modal);
-}
-
-/** Saves the chosen lanes and posts the panel where the command was run. */
-async function confirmPanel(interaction) {
-  await interaction.deferReply({ flags: MessageFlags.Ephemeral });
-
-  const labels = [];
-  for (let i = 0; i < 5; i += 1) {
-    const value = interaction.fields.getTextInputValue(`lane${i}`).trim();
-    if (value) labels.push(value.slice(0, 45));
-  }
-
-  const record = await guildRecord(interaction.guildId);
-  const settings = record.settings;
-
-  settings.lanes = labels.map((label) => {
-    const slug = slugify(label);
-    return { label, value: slug, description: '' };
-  });
-
-  const laneList = lanesFor(settings);
-
-  // interaction.channel is null for some modal submissions; resolve it by id.
-  const targetChannel = interaction.channel
-    || await interaction.client.channels.fetch(interaction.channelId).catch(() => null);
-  if (!targetChannel || !targetChannel.isTextBased()) {
-    return interaction.editReply({ content: 'I cannot post here — run `/panel` from a normal text channel.' });
-  }
-
-  const sent = await targetChannel.send(panelMessage(laneList));
-  settings.panelChannelId = targetChannel.id;
-  settings.panelMessageId = sent.id;
-  await save();
-
-  return interaction.editReply({
-    content: [
-      `Panel posted in <#${interaction.channelId}>.`,
-      '',
-      laneList.length
-        ? `Options: ${laneList.map((lane) => `**${lane.label}**`).join(', ')}`
-        : 'No custom options — the four defaults are in place.',
-      '',
-      'Run `/panel` again anywhere to change them; the panel moves with it.',
-    ].join('\n'),
-  });
 }
 
 /* ------------------------------------------------------------------ */
