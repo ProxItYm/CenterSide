@@ -99,7 +99,7 @@ function isDisallowedIntents(err) {
 const ONBOARDING = [
   '# How to set up CenterSide — fast and easy guide',
   '',
-  '**1.** Add the bot from <#1571660427820015636> — invite: https://discord.gg/B8wfSn9W87',
+  '**1.** Add the bot from https://proxitym.github.io/CenterSide/',
   '**2.** Tell the bot about your server with **/describe**',
   '**3.** Set up tickets with **/setup** (pick your support role + the questions)',
   '**4.** Post the panel with **/panel** — that is the door members use',
