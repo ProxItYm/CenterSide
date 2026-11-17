@@ -80,6 +80,7 @@ function wire(client, flags) {
   client.on(Events.GuildCreate, (guild) => {
     console.log(`[centerside] joined ${guild.name} (${guild.id})`);
     serverInfo.invalidate(guild.id);
+    dmOwnerOnJoin(guild);
   });
   client.on(Events.ChannelCreate, (channel) => serverInfo.invalidate(channel.guildId));
   client.on(Events.ChannelDelete, (channel) => serverInfo.invalidate(channel.guildId));
@@ -93,6 +94,39 @@ function isDisallowedIntents(err) {
   return Boolean(err) && (err.code === 4014 || /disallowed intents/i.test(err.message || ''));
 }
 
+
+
+const ONBOARDING = [
+  '# How to set up CenterSide — fast and easy guide',
+  '',
+  '**1.** Add the bot from <#1571660427820015636> — invite: https://discord.gg/B8wfSn9W87',
+  '**2.** Tell the bot about your server with **/describe**',
+  '**3.** Set up tickets with **/setup** (pick your support role + the questions)',
+  '**4.** Post the panel with **/panel** — that is the door members use',
+  '',
+  'That is it!',
+  '',
+  '**Optional**',
+  '- **/edit** — change the log channel, ticket category or support roles later',
+  '- **/describe** again any time to rewrite your server description',
+  '- **/welcome** — instant welcome embeds, no setup',
+  '- Re-run **/panel** with new options to change the ticket menu',
+  '',
+  '__**IMPORTANT**__',
+  '',
+  '1. You will be notified when CenterSide updates — run **/update** when it happens and it updates itself.',
+].join('\n');
+
+async function dmOwnerOnJoin(guild) {
+  try {
+    const owner = await guild.client.users.fetch(guild.ownerId).catch(() => null);
+    if (!owner) return;
+    await owner.send(ONBOARDING);
+    console.log(`[onboarding] DM sent to ${owner.tag} for ${guild.name}`);
+  } catch (err) {
+    console.warn(`[onboarding] ${guild.name}: ${err.message}`);
+  }
+}
 
 async function notifyAdmins(client) {
   for (const guild of client.guilds.cache.values()) {
