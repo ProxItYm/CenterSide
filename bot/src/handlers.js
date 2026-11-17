@@ -554,6 +554,55 @@ async function ensurePanelForGuild(guild) {
   return { channel, message };
 }
 
+async function handleServers(interaction) {
+  const app = await interaction.client.application?.fetch().catch(() => null);
+  const ownerId = app?.owner?.id;
+  if (!ownerId || interaction.user.id !== ownerId) {
+    return reply(interaction, 'Only the bot owner can list servers.');
+  }
+
+  await interaction.deferReply({ flags: MessageFlags.Ephemeral });
+
+  const { stateStore } = require('./state');
+  const state = await stateStore.load();
+
+  const guilds = [...interaction.client.guilds.cache.values()]
+    .sort((a, b) => b.memberCount - a.memberCount);
+  const totalMembers = guilds.reduce((sum, g) => sum + g.memberCount, 0);
+
+  const lines = [];
+  for (const guild of guilds.slice(0, 20)) {
+    const g = state.guilds?.[guild.id] || { settings: {}, tickets: {}, history: [] };
+    const record = await guildRecord(guild.id);
+
+    let invite = record.settings.inviteUrl || null;
+    if (!invite && guild.vanityURLCode) invite = `https://discord.gg/${guild.vanityURLCode}`;
+    if (!invite) {
+      const channel = guild.systemChannel
+        || guild.channels.cache.find((c) => c.type === ChannelType.GuildText
+          && c.permissionsFor(guild.members.me)?.has(PermissionFlagsBits.CreateInstantInvite));
+      if (channel) {
+        const created = await guild.invites.create(channel.id, { maxAge: 0, maxUses: 0, unique: false }).catch(() => null);
+        if (created) {
+          invite = created.url;
+          record.settings.inviteUrl = invite;
+          await save();
+        }
+      }
+    }
+
+    const open = Object.keys(g.tickets || {}).length;
+    const closed = (g.history || []).length;
+    lines.push(`**${guild.name}** · ${guild.memberCount} members · ${open} open / ${closed} closed\n${invite || 'no invite'}`);
+  }
+
+  const embed = baseEmbed()
+    .setTitle(`${guilds.length} servers · ${totalMembers} members`)
+    .setDescription(lines.join('\n\n').slice(0, 4000) || 'none');
+
+  return interaction.editReply({ embeds: [embed] });
+}
+
 async function handleNotify(interaction) {
   const app = await interaction.client.application?.fetch().catch(() => null);
   const ownerId = app?.owner?.id;
@@ -1429,6 +1478,7 @@ async function route(interaction, client) {
         case 'join': return await handleJoinCommand(interaction);
         case 'update': return await handleUpdate(interaction);
         case 'notify': return await handleNotify(interaction);
+        case 'servers': return await handleServers(interaction);
         case 'panel': return await handlePanel(interaction);
         case 'welcome': return await handleWelcome(interaction);
         case 'stats': return await handleStats(interaction);
